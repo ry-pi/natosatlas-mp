@@ -1,7 +1,6 @@
 package dev.natowb.natosatlas.client.ui.screens.map;
 
 import dev.natowb.natosatlas.client.NAClient;
-import dev.natowb.natosatlas.client.platform.ClientWorldAccess;
 import dev.natowb.natosatlas.core.data.NACoord;
 import dev.natowb.natosatlas.client.ui.screens.settings.Settings;
 import dev.natowb.natosatlas.core.NAConstants;
@@ -17,6 +16,7 @@ public class MapStageSlime implements MapStage {
     @Override
     public void draw(MapContext ctx, Set<Long> visibleRegions, int activeLayer) {
         if (!Settings.showSlimeChunks) return;
+        final long seed = dev.natowb.natosatlas.client.SlimeSeed.getEffectiveSeed(); // mp6: custom seed override, read once per draw
         for (long key : visibleRegions) {
             NACoord coord = NACoord.fromKey(key);
             int texId = TextureProvider.getTexture(coord, activeLayer);
@@ -25,7 +25,7 @@ public class MapStageSlime implements MapStage {
                     for (int z = 0; z < CHUNKS_PER_MINECRAFT_REGION; z++) {
                         int worldChunkX = coord.x * CHUNKS_PER_MINECRAFT_REGION + x;
                         int worldChunkZ = coord.z * CHUNKS_PER_MINECRAFT_REGION + z;
-                        if (!isSlimeChunk(worldChunkX, worldChunkZ)) continue;
+                        if (!isSlimeChunk(seed, worldChunkX, worldChunkZ)) continue;
                         drawSlimeChunkSquare(worldChunkX, worldChunkZ);
                     }
                 }
@@ -34,9 +34,16 @@ public class MapStageSlime implements MapStage {
     }
 
     // FIXME: move this to a global acessor at some point
-    private boolean isSlimeChunk(int worldChunkX, int worldChunkZ) {
-        long seed = ClientWorldAccess.get().getWorldInfo().getSeed();
-        return new Random(seed + (long) (worldChunkX * worldChunkX) * 4987142L + (long) worldChunkX * 5947611L + (long) (worldChunkZ * worldChunkZ) * 4392871L + (long) worldChunkZ * 389711L ^ 987234911L).nextInt(10) == 0;
+    public static boolean isSlimeChunk(long seed, int worldChunkX, int worldChunkZ) {
+        // mp6: exact b1.7.3 Chunk.getSlimeRandom arithmetic (x terms and z*389711 overflow as int, z*z widened before multiply).
+        // The original code widened every term to long, which drifted from vanilla beyond ~|chunkX| 21.
+        long s = seed
+                + (long) (worldChunkX * worldChunkX * 4987142)
+                + (long) (worldChunkX * 5947611)
+                + (long) (worldChunkZ * worldChunkZ) * 4392871L
+                + (long) (worldChunkZ * 389711)
+                ^ 987234911L;
+        return new Random(s).nextInt(10) == 0;
     }
 
     private void drawSlimeChunkSquare(int chunkX, int chunkZ) {

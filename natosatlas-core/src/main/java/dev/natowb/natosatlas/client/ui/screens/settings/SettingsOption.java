@@ -51,6 +51,20 @@ public enum SettingsOption {
         }
     },
 
+    BLOCK_COLORS("Block colours") {
+        @Override
+        public void cycle() {
+            Settings.blockColors = Settings.blockColors == Settings.BlockColors.Classic
+                    ? Settings.BlockColors.TrueColor : Settings.BlockColors.Classic;
+            Settings.save();
+        }
+
+        @Override
+        public String getValueLabel() {
+            return Settings.blockColors == Settings.BlockColors.TrueColor ? "True colour" : "Classic";
+        }
+    },
+
     MAP_GRID("Grid") {
         @Override
         public void cycle() {
@@ -71,7 +85,8 @@ public enum SettingsOption {
 
         @Override
         public String getValueLabel() {
-            return Settings.showSlimeChunks ? "On" : "Off";
+            if (!Settings.showSlimeChunks) return "Off";
+            return dev.natowb.natosatlas.client.SlimeSeed.isCustom() ? "On (custom seed)" : "On (server seed)";
         }
     },
 

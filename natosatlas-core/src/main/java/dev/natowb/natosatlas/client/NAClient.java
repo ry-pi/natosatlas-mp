@@ -42,6 +42,7 @@ public class NAClient implements NAClientSession {
     private String offlineSaveName;
     private String serverName;
     private int dim;
+    private boolean isMp;
     private final ClientPlatform platform;
 
     public NAClient(ClientPlatform platform) {
@@ -97,6 +98,8 @@ public class NAClient implements NAClientSession {
 
         int currentDim = ClientWorldAccess.get().getWorldInfo().getDimensionId();
         if (dim != currentDim) {
+            // MP patch: save the old dimension's dirty regions under the OLD dim before switching
+            mapSaver.flushAll(dim, isMp);
             dim = currentDim;
             onDimensionChange(dim);
             return;
@@ -112,8 +115,11 @@ public class NAClient implements NAClientSession {
     private void onWorldJoined(String worldSaveName, int dim, boolean isMultiplayerWorld) {
         LogUtil.info("[Client] Joined world (world={} dim={})", worldSaveName, dim);
 
+        this.isMp = isMultiplayerWorld;
         NAPaths.setWorldPaths(worldSaveName, isMultiplayerWorld);
 
+        if (isMultiplayerWorld) RegionImporter.ensureFolders();
+        SlimeSeed.load(); // mp6: per-server/per-world slime seed override
         Waypoints.load();
         mapSaver.start();
     }
@@ -121,17 +127,29 @@ public class NAClient implements NAClientSession {
     private void onWorldLeft() {
         LogUtil.info("[Client] Left world (world={})", offlineSaveName);
 
+        RegionImporter.get().cancel();
+        mapSaver.flushAll(dim, isMp);
         mapSaver.stop();
         NARegionPixelCache.get().clear();
     }
 
     private void onDimensionChange(int newDim) {
-        LogUtil.info("[Client] Changed dimension (dim={newDim})", newDim);
+        LogUtil.info("[Client] Changed dimension (dim={})", newDim);
         NARegionPixelCache.get().clear();
     }
 
     private void onWorldTick() {
+        try {
+            onWorldTickUnsafe();
+        } catch (Throwable t) {
+            LogUtil.warn("[Client] World tick error (ignored): {}", t);
+        }
+    }
+
+    private void onWorldTickUnsafe() {
+        if (ClientWorldAccess.get().getPlayer() == null) return;
         mapUpdater.tick();
+        RegionImporter.get().tick();
         mapSaver.saveNextBatch();
 
         if (Settings.minimapEnabled)

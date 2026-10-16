@@ -20,9 +20,28 @@ public final class ChunkColorEngine {
         int meta = chunk.meta[index];
         NABiome biome = chunk.biome[index];
 
-        int baseColor = BlockAccess.get().getColor(blockId, meta);
-
-        baseColor = applyBiomeTint(blockId, baseColor, biome);
+        int baseColor;
+        int trueColor = -1;
+        BlockAccess ba = BlockAccess.get();
+        if (dev.natowb.natosatlas.client.ui.screens.settings.Settings.blockColors
+                == dev.natowb.natosatlas.client.ui.screens.settings.Settings.BlockColors.TrueColor
+                && !ba.isFluid(blockId)
+                && !ba.isBlock(blockId, BlockAccess.BlockIdentifier.GRASS)) { // mp4: grass keeps Classic colour
+            trueColor = ba.getTrueColor(blockId, meta);
+        }
+        if (trueColor != -1) {
+            baseColor = trueColor;
+            if (biome != null && ba.isBlock(blockId, BlockAccess.BlockIdentifier.GRASS)) {
+                baseColor = TrueColorCache.multiply(baseColor, biome.grassColor);
+            } else if (biome != null && ba.isBlock(blockId, BlockAccess.BlockIdentifier.LEAVES)) {
+                int m = meta & 3; // b1.7.3: 1 = spruce, 2 = birch use fixed colours
+                int tint = m == 1 ? 0x619961 : m == 2 ? 0x80A755 : biome.foliageColor;
+                baseColor = TrueColorCache.multiply(baseColor, tint);
+            }
+        } else {
+            baseColor = ba.getColor(blockId, meta);
+            baseColor = applyBiomeTint(blockId, baseColor, biome);
+        }
 
         if (BlockAccess.get().isFluid(blockId)) {
             baseColor = applyWaterTint(localX, localZ, chunk, baseColor);

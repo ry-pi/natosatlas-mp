@@ -42,13 +42,18 @@ public class MapUpdater {
         }
 
         NAEntity player = ClientWorldAccess.get().getPlayer();
+        if (player == null) return;
         NACoord offset = scanOrder.get(scanIndex++);
         NACoord chunkCoord = NACoord.from(player.chunkX + offset.x, player.chunkZ + offset.z);
 
-        ChunkWrapper chunk = ClientWorldAccess.get().getChunk(chunkCoord);
-        if (chunk == null) return;
-
-        updateChunk(chunkCoord, chunk);
+        try {
+            ChunkWrapper chunk = ClientWorldAccess.get().getChunk(chunkCoord);
+            // MP patch: chunk not received from the server yet -> skip, it is retried on the next scan cycle
+            if (chunk == null || chunk.isAllAir()) return;
+            updateChunk(chunkCoord, chunk);
+        } catch (Throwable t) {
+            LogUtil.warn("[MapUpdater] Skipped chunk {} after error: {}", chunkCoord, t);
+        }
     }
 
     public void updateChunk(NACoord chunkCoord, ChunkWrapper wrapper) {

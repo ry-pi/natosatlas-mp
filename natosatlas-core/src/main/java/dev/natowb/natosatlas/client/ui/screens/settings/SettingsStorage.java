@@ -13,6 +13,7 @@ public final class SettingsStorage extends TextStorage {
 
     @Override
     protected void onLoad() {
+        Settings.blockColors = getEnum("blockColors", Settings.BlockColors.class, Settings.BlockColors.Classic);
         Settings.mapGrid = getBoolean("mapGrid", true);
         Settings.debugInfo = getBoolean("debugInfo", false);
         Settings.defaultZoom = getFloat("defaultZoom", 1f);
@@ -33,6 +34,7 @@ public final class SettingsStorage extends TextStorage {
 
     @Override
     protected void onSave() {
+        put("blockColors", Settings.blockColors.name());
         put("mapGrid", Settings.mapGrid);
         put("debugInfo", Settings.debugInfo);
         put("defaultZoom", Settings.defaultZoom);

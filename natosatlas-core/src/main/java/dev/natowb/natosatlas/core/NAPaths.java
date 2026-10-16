@@ -29,7 +29,17 @@ public final class NAPaths {
         LogUtil.info("Set dataPath to {}", dataPath);
     }
 
+    /** MP patch: make a server name safe as a folder name on every OS (IPv6 ':', '%', '/', '..', non-ASCII). */
+    public static String sanitizeFolderName(String name) {
+        if (name == null || name.isEmpty()) return "unknown-server";
+        String s = name.replaceAll("[^A-Za-z0-9._-]", "_");
+        s = s.replaceAll("^\\.+", "_").replaceAll("[. ]+$", "_");
+        if (s.length() > 100) s = s.substring(0, 100);
+        return s.isEmpty() ? "unknown-server" : s;
+    }
+
     public static void setWorldPaths(String saveName, boolean isMultiplayerWorld) {
+        if (isMultiplayerWorld) saveName = sanitizeFolderName(saveName);
         worldSaveName = saveName;
         if (isMultiplayerWorld) {
             worldDataPath = ensurePathExists(dataPath.resolve(String.format("servers/%s/", saveName)));

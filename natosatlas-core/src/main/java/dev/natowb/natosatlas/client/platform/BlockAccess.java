@@ -20,7 +20,8 @@ public abstract class BlockAccess {
     public enum BlockIdentifier {
         GRASS,
         GLASS,
-        SNOW
+        SNOW,
+        LEAVES
     }
 
     private final HashMap<BlockIdentifier, Integer> blockIdLookup = new HashMap<>();
@@ -38,6 +39,11 @@ public abstract class BlockAccess {
     }
 
     public abstract int getColor(int blockId, int blockMeta);
+
+    /** mp3: average top texture colour, or -1 to fall back to getColor. Default: unsupported. */
+    public int getTrueColor(int blockId, int blockMeta) {
+        return -1;
+    }
 
     public abstract boolean isFluid(int blockId);
 

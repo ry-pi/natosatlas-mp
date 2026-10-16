@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class STClientWorldAccess extends ClientWorldAccess {
+    private static final NABiome FALLBACK_BIOME = new NABiome(0x7FB238, 0x48B518, "Unknown");
     private static final Minecraft mc = (Minecraft) FabricLoader.getInstance().getGameInstance();
 
     @Override
@@ -58,7 +59,14 @@ public class STClientWorldAccess extends ClientWorldAccess {
 
     @Override
     public NABiome getBiome(NACoord blockCoord) {
-        Biome biome = mc.world.method_1781().getBiome(blockCoord.x, blockCoord.z);
+        if (mc.world == null) return FALLBACK_BIOME;
+        Biome biome;
+        try {
+            biome = mc.world.method_1781().getBiome(blockCoord.x, blockCoord.z);
+        } catch (RuntimeException e) {
+            return FALLBACK_BIOME;
+        }
+        if (biome == null) return FALLBACK_BIOME;
         return new NABiome(biome.grassColor, biome.foliageColor, biome.name);
     }
 
@@ -105,33 +113,45 @@ public class STClientWorldAccess extends ClientWorldAccess {
     @Override
     public NAEntity getPlayer() {
         PlayerEntity p = mc.player;
+        if (p == null) return null;
         return new NAEntity(p.x, p.y, p.z, p.yaw, NAEntity.NAEntityType.Player);
     }
 
 
     @Override
     public ChunkWrapper getChunk(NACoord chunkCoord) {
+        if (mc.world == null) return null;
+        // MP patch (pattern from Rei's Minimap Babric port, MIT): only touch chunks the client has loaded
+        if (!mc.world.isPosLoaded(chunkCoord.x << 4, 0, chunkCoord.z << 4)) return null;
         Chunk chunk = mc.world.getChunk(chunkCoord.x, chunkCoord.z);
         if (chunk == null) return null;
+        // MP patch: client returns a placeholder EmptyChunk for chunks the server has not sent
+        if (chunk instanceof net.minecraft.world.chunk.EmptyChunk) return null;
+        if (chunk.x != chunkCoord.x || chunk.z != chunkCoord.z) return null;
+        final int h = mc.world.getHeight();
 
         return new ChunkWrapper(chunk, mc.world.getHeight()) {
             @Override
             public int getBlockId(int x, int y, int z) {
+                if (!ChunkWrapper.inBounds(x, y, z, worldHeight)) return 0;
                 return ((Chunk) chunk).getBlockId(x, y, z);
             }
 
             @Override
             public int getBlockMeta(int x, int y, int z) {
+                if (!ChunkWrapper.inBounds(x, y, z, worldHeight)) return 0;
                 return ((Chunk) chunk).getBlockMeta(x, y, z);
             }
 
             @Override
             public int getBlockLight(int x, int y, int z) {
+                if (!ChunkWrapper.inBounds(x, y, z, worldHeight)) return 0;
                 return ((Chunk) chunk).getLight(LightType.BLOCK, x, y, z);
             }
 
             @Override
             public int getSkyLight(int x, int y, int z) {
+                if (!ChunkWrapper.inBounds(x, y, z, worldHeight)) return 0;
                 return ((Chunk) chunk).getLight(LightType.SKY, x, y, z);
             }
         };
@@ -156,22 +176,26 @@ public class STClientWorldAccess extends ClientWorldAccess {
 
                 @Override
                 public int getBlockId(int x, int y, int z) {
-                    return mcChunk.getBlockId(x, y, z);
+                    if (!ChunkWrapper.inBounds(x, y, z, worldHeight)) return 0;
+                return mcChunk.getBlockId(x, y, z);
                 }
 
                 @Override
                 public int getBlockMeta(int x, int y, int z) {
-                    return mcChunk.getBlockMeta(x, y, z);
+                    if (!ChunkWrapper.inBounds(x, y, z, worldHeight)) return 0;
+                return mcChunk.getBlockMeta(x, y, z);
                 }
 
                 @Override
                 public int getBlockLight(int x, int y, int z) {
-                    return mcChunk.getLight(LightType.BLOCK, x, y, z);
+                    if (!ChunkWrapper.inBounds(x, y, z, worldHeight)) return 0;
+                return mcChunk.getLight(LightType.BLOCK, x, y, z);
                 }
 
                 @Override
                 public int getSkyLight(int x, int y, int z) {
-                    return mcChunk.getLight(LightType.SKY, x, y, z);
+                    if (!ChunkWrapper.inBounds(x, y, z, worldHeight)) return 0;
+                return mcChunk.getLight(LightType.SKY, x, y, z);
                 }
             };
 

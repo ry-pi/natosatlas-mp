@@ -10,7 +10,7 @@ import dev.natowb.natosatlas.core.storage.NARegionStorage;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -29,7 +29,7 @@ public class MapSaver {
     private final NARegionStorage storage = NARegionStorage.get();
 
     private final BlockingQueue<SaveTask> queue = new LinkedBlockingQueue<>();
-    private final Map<String, SaveTask> pending = new HashMap<>();
+    private final Map<String, SaveTask> pending = new ConcurrentHashMap<>();
 
     private Thread workerThread;
     private volatile boolean running = false;
@@ -78,9 +78,26 @@ public class MapSaver {
         return pending.size();
     }
 
+    /** MP patch: save every dirty region under an explicit dim (used before dimension change / leave). */
+    public void flushAll(int dim, boolean isMultiplayer) {
+        if (!running) return;
+        Long key;
+        while ((key = cache.pollDirty()) != null) {
+            try {
+                enqueueRegion(NACoord.fromKey(key), dim, isMultiplayer);
+            } catch (Throwable t) {
+                dev.natowb.natosatlas.core.util.LogUtil.warn("[MapSaver] flush failed: {}", t);
+            }
+        }
+    }
+
     private void enqueueRegion(NACoord coord) {
-        int dim = ClientWorldAccess.get().getWorldInfo().getDimensionId();
-        boolean isMultiplayer = ClientWorldAccess.get().getWorldInfo().isMultiplayer();
+        NAWorldInfo info = ClientWorldAccess.get().getWorldInfo();
+        if (info == null) return;
+        enqueueRegion(coord, info.getDimensionId(), info.isMultiplayer());
+    }
+
+    private void enqueueRegion(NACoord coord, int dim, boolean isMultiplayer) {
 
         for (NALayer layer : LayerRegistry.getLayers()) {
             NARegionPixelData region = cache.getRegion(layer.id, coord);

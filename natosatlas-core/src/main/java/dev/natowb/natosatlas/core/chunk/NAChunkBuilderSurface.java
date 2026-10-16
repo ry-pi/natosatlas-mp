@@ -16,9 +16,14 @@ public class NAChunkBuilderSurface implements NAChunkBuilder {
         NAChunk nac = new NAChunk();
         for (int z = 0; z < BLOCKS_PER_MINECRAFT_CHUNK; z++) {
             for (int x = 0; x < BLOCKS_PER_MINECRAFT_CHUNK; x++) {
-                int height = wrapper.getTopSolidBlockY(x, z) - 1;
+                int top = wrapper.getTopSolidBlockY(x, z);
+                if (top <= 0) {
+                    // MP patch: empty column (chunk not received yet) - leave blank, never read y=-1
+                    continue;
+                }
+                int height = top - 1;
                 int aboveId = wrapper.getBlockId(x, height + 1, z);
-                if (BlockAccess.get().isBlock(aboveId, BlockAccess.BlockIdentifier.SNOW)) {
+                if (height + 1 < wrapper.getWorldHeight() - 1 && BlockAccess.get().isBlock(aboveId, BlockAccess.BlockIdentifier.SNOW)) {
                     height = height + 1;
                 }
 

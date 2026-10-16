@@ -13,10 +13,13 @@ public final class Settings {
 
     public enum MapRenderMode {Day, Night, Cave, Auto}
 
+    public enum BlockColors {Classic, TrueColor}
+
     public enum MinimapPosition {TopLeft, TopRight, BottomLeft, BottomRight}
 
 
     // World map settings
+    public static BlockColors blockColors = BlockColors.Classic;
     public static boolean mapGrid = true;
     public static boolean debugInfo = false;
     public static boolean showSlimeChunks = false;

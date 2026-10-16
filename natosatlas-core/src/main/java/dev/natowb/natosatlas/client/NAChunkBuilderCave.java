@@ -39,7 +39,7 @@ public class NAChunkBuilderCave implements NAChunkBuilder {
 
     private static int findTopmostCaveFloor(ChunkWrapper chunk, int x, int z, int playerY) {
 
-        int startY = Math.min(playerY, ClientWorldAccess.get().getWorldInfo().getWorldHeight() - 1);
+        int startY = Math.max(0, Math.min(playerY, chunk.getWorldHeight() - 1));
 
         for (int y = startY; y > 1; y--) {
 

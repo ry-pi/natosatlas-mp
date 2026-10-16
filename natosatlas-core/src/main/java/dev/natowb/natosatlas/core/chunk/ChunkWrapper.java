@@ -12,9 +12,27 @@ public abstract class ChunkWrapper {
         this.worldHeight = worldHeight;
     }
 
+    /** MP patch: true when (x,y,z) is a valid in-chunk coordinate for a world of the given height. */
+    public static boolean inBounds(int x, int y, int z, int worldHeight) {
+        return x >= 0 && x < 16 && z >= 0 && z < 16 && y >= 0 && y < worldHeight;
+    }
+
+    public int getWorldHeight() {
+        return worldHeight;
+    }
+
+    /** MP patch: a chunk with no non-air block at all is treated as not received yet. */
+    public boolean isAllAir() {
+        for (int x = 0; x < 16; x++)
+            for (int z = 0; z < 16; z++)
+                for (int y = worldHeight - 1; y >= 0; y--)
+                    if (getBlockId(x, y, z) != 0) return false;
+        return true;
+    }
+
     public int getTopSolidBlockY(int x, int z) {
 
-        int y = worldHeight - 1;
+        int y = Math.min(worldHeight, 128) - 1;
         x &= 15;
         int z0 = z & 15;
 
@@ -30,7 +48,9 @@ public abstract class ChunkWrapper {
     }
 
     public int computeFluidDepth(int x, int y, int z) {
-        if (y < 0) return 0;
+        if (y < 0 || y >= worldHeight) return 0;
+        x &= 15;
+        z &= 15;
         int depth = 0;
         while (y > 0) {
             int id = getBlockId(x, y, z);

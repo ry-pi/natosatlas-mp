@@ -112,7 +112,7 @@ public class MapScreen extends UIScreen {
             }
             Settings.save();
         });
-        slimeChunksButton.setTooltip("Toggle Slime Chunks");
+        slimeChunksButton.setTooltip("Toggle Slime Chunks (" + dev.natowb.natosatlas.client.SlimeSeed.describe() + ")");
         addButton(slimeChunksButton);
 
         UIElementIconButton gridButton = new UIElementIconButton(107, rightLayout, 20, 20, ICON_GRID_ENABLED);
@@ -287,6 +287,8 @@ public class MapScreen extends UIScreen {
 
         renderDebugInfo(ctx);
         renderMouseBlockInfo(ctx);
+        String importStatus = dev.natowb.natosatlas.client.RegionImporter.get().getStatus();
+        if (!importStatus.isEmpty()) painter.drawCenteredString(importStatus, width / 2, 4, 0xFF55FF55);
         super.render(mouseX, mouseY, delta, scaleInfo);
     }
 
