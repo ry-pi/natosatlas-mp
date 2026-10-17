@@ -100,7 +100,7 @@ Tile saves now go to a temp file and are then moved into place, so the export ne
 <p align="center"><img src="assets/mp9-toolbar-preview.png" width="70%" alt="Markup toolbar"></p>
 
 - Tools (**1**-**6**): Pan, Rectangle, Ellipse, Line, Pencil, Eraser. Rectangles snap to whole blocks and show the block coordinates of all four corners plus the size (e.g. `63 x 34`), while drawing and afterwards. Lines show their length while drawing. Hold **Shift** for squares, circles and 45 degree lines.
-- Fill on/off (**F**), line width 1/2/3/5 px (**[** and **]**), Undo (**Ctrl+Z**), Clear all (undoable), Save (**Ctrl+S**), Close (X).
+- Fill on/off (**F**), thickness 1/2/3/5 (blocks since mp11; **[** and **]**), Undo (**Ctrl+Z**), Clear all (undoable), Save (**Ctrl+S**), Close (X).
 - Colour: 16 colour palette under the tools; the bar above it is the current colour.
 - Shapes are stored in world coordinates, so they stay in place when you pan, zoom or rotate. Right drag still rotates and middle drag pans with any tool.
 - **Save** writes the map (the dimension and mode shown) around your markup, plus a margin, with the markup and corner coordinates drawn on it, to `.minecraft/screenshots/worldmap-markup-yyyy-MM-dd_HH.mm.ss.png`: up to 8 px per block, 4096 px max per side, north up. With no markup it saves the area on screen.
@@ -110,6 +110,22 @@ Also fixed: the coordinates at the bottom of the map (and new waypoints from a d
 
 ## 1.5.4-mp10
 The dimension toggle button moved from the top-left row (next to Markup) to the left end of the top-right row, next to the map mode, entities, grid, slime and waypoint buttons. D still toggles it.
+
+## 1.5.4-mp11: whole-block markup, readable labels, fixed top-right buttons
+<p align="center"><img src="assets/mp11-preview.png" width="70%" alt="mp11 markup and top-right buttons"></p>
+
+- **Top-right buttons no longer shift.** In the Nether the map mode button (Day / Night / Cave / Auto, the "A") used to disappear, which slid every button one slot over and made it look like the entities button had gone. Every button now has a fixed slot. In the Nether the map mode button stays in place, greyed out, with the tooltip "Map mode only applies in the Overworld", because the Nether always shows the cave map.
+- **Readable labels.** Rectangle corner coordinates and the `W x H` size are bright text with a shadow on a near-opaque black box with padding, in the map and in saved PNGs. They had been drawn with the game font's darkened shadow pass, which is why they looked dark red or grey.
+- **Markup colours whole map blocks.** Every tool now fills block cells, like a pixel-art editor:
+  - Rectangle: the border cells (or every cell when filled).
+  - Ellipse / circle: a symmetric midpoint ellipse on the block grid, with no gaps or doubled corners.
+  - Line: Bresenham.
+  - Pencil: the block under the cursor, with gaps between mouse samples joined up.
+  - Eraser: removes the blocks under it from any shape.
+- Thickness is 1, 2, 3 or 5 blocks. Each block is a see-through square (about 66 % opacity). A shape never colours the same block twice, so the opacity stays even.
+- Cells are stored in world blocks, so they follow pan, zoom and rotation. Only cells that are on screen are drawn, and each shape's cells are cached.
+- Corner labels sit on the outer corners of the rectangle's corner blocks and name those blocks (inclusive). `25 x 29` is the number of blocks.
+- Saved markup PNGs show the same blocks.
 
 ## Building this fork
 Built with JDK 21. From the repo root:

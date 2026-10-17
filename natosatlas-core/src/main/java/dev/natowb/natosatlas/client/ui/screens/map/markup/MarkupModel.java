@@ -3,7 +3,7 @@ package dev.natowb.natosatlas.client.ui.screens.map.markup;
 import java.util.ArrayList;
 import java.util.List;
 
-/** mp9: the markup shapes (in memory only) with undo. Forgotten when markup mode ends unless saved as an image. */
+/** mp9 (mp11: cell eraser): the markup shapes (in memory only) with undo. Forgotten when markup mode ends unless saved as an image. */
 public final class MarkupModel {
 
     private interface Undo {
@@ -53,6 +53,48 @@ public final class MarkupModel {
         push(list -> {
             list.clear();
             list.addAll(before);
+        });
+    }
+
+    // ---- mp11 eraser: one drag = one undo step; removes cells, and a shape left with no cells is removed
+
+    private java.util.Map<MarkupShape, java.util.Set<Long>> strokeErased;
+    private List<Object[]> strokeRemoved; // {index, shape}
+
+    public void beginErase() {
+        strokeErased = new java.util.LinkedHashMap<>();
+        strokeRemoved = new ArrayList<>();
+    }
+
+    /** Erases these cells from every shape of the dimension; returns true if anything changed. */
+    public boolean erase(int dim, java.util.Set<Long> cells) {
+        if (strokeErased == null) beginErase();
+        boolean changed = false;
+        for (int i = shapes.size() - 1; i >= 0; i--) {
+            MarkupShape s = shapes.get(i);
+            if (s.dim != dim) continue;
+            java.util.Set<Long> hit = s.erase(cells);
+            if (hit.isEmpty()) continue;
+            changed = true;
+            strokeErased.computeIfAbsent(s, k -> new java.util.HashSet<>()).addAll(hit);
+            if (s.cells().isEmpty()) {
+                strokeRemoved.add(new Object[]{i, s});
+                shapes.remove(i);
+            }
+        }
+        return changed;
+    }
+
+    public void endErase() {
+        if (strokeErased == null) return;
+        final java.util.Map<MarkupShape, java.util.Set<Long>> er = strokeErased;
+        final List<Object[]> rm = strokeRemoved;
+        strokeErased = null;
+        strokeRemoved = null;
+        if (er.isEmpty()) return;
+        push(list -> {
+            for (int i = rm.size() - 1; i >= 0; i--) list.add(Math.min((Integer) rm.get(i)[0], list.size()), (MarkupShape) rm.get(i)[1]);
+            for (java.util.Map.Entry<MarkupShape, java.util.Set<Long>> e : er.entrySet()) e.getKey().unerase(e.getValue());
         });
     }
 

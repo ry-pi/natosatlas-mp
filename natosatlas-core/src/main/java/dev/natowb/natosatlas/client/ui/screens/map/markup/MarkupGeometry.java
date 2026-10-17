@@ -1,6 +1,8 @@
 package dev.natowb.natosatlas.client.ui.screens.map.markup;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 
 /** mp9: pure markup math (snapping, corner labels, hit tests, export area). No GL; unit tested headless. */
@@ -101,21 +103,14 @@ public final class MarkupGeometry {
         return in;
     }
 
-    /** Eraser hit test in screen space: on the stroke (within tolerance) or inside a filled shape. */
-    public static boolean hits(MarkupShape s, Projector proj, double mx, double my, double tolerance) {
-        List<double[]> world = s.outline();
-        if (world.isEmpty()) return false;
-        List<double[]> pts = new ArrayList<>(world.size());
-        for (double[] w : world) pts.add(proj.toScreen(w[0], w[1]));
-        double tol = tolerance + s.width / 2.0;
-        if (pts.size() == 1) return Math.hypot(mx - pts.get(0)[0], my - pts.get(0)[1]) <= tol;
-        int n = pts.size();
-        int segs = s.isClosed() ? n : n - 1;
-        for (int i = 0; i < segs; i++) {
-            double[] a = pts.get(i), b = pts.get((i + 1) % n);
-            if (distToSegment(mx, my, a[0], a[1], b[0], b[1]) <= tol) return true;
-        }
-        return s.filled && insidePolygon(mx, my, pts);
+    /** mp11 eraser hit test on block cells: does the shape colour any cell of the t x t brush at (bx, bz)? */
+    public static boolean hits(MarkupShape s, int bx, int bz, int t) {
+        if (s.points.isEmpty()) return false;
+        Set<Long> brush = new HashSet<>();
+        MarkupRaster.brush(bx, bz, Math.max(1, t), brush);
+        BlockCells c = s.cells();
+        for (long k : brush) if (c.contains(BlockCells.keyX(k), BlockCells.keyZ(k))) return true;
+        return false;
     }
 
     /** Union bounds {minX, minZ, maxX, maxZ} of shapes, or null if there are none. */

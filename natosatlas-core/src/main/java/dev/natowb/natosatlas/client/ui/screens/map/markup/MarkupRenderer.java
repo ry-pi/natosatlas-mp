@@ -5,113 +5,100 @@ import dev.natowb.natosatlas.client.ui.screens.map.MapContext;
 import dev.natowb.natosatlas.client.ui.screens.map.MapProjection;
 import org.lwjgl.opengl.GL11;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * mp9: draws markup shapes over the world map. Shapes are in world blocks; every point is projected to the screen
- * (so zoom, pan and rotation all apply) and strokes are drawn as screen-space quads, so the width stays the same
- * on any GPU (glLineWidth > 1 isn't guaranteed).
+ * Draws markup over the world map. mp11: a shape colours whole blocks: each run of cells in a row is one quad whose
+ * four corners are block corners projected through the map transform, so it covers exactly those blocks at any
+ * zoom, pan and rotation. Cells are unique per shape (no double-painted alpha) and only on-screen rows are drawn.
  */
 public final class MarkupRenderer {
     private MarkupRenderer() {
     }
 
     public static void drawShapes(MapContext ctx, List<MarkupShape> shapes, MarkupShape preview, NAPainter p) {
+        double[] vis = MapProjection.visibleWorldBounds(ctx); // {minX, minZ, maxX, maxZ}
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         boolean cull = GL11.glIsEnabled(GL11.GL_CULL_FACE);
-        GL11.glDisable(GL11.GL_CULL_FACE); // quads are wound either way
-        for (MarkupShape s : shapes) drawShape(ctx, s);
-        if (preview != null) drawShape(ctx, preview);
+        GL11.glDisable(GL11.GL_CULL_FACE); // quads are wound either way (rotation / mirroring)
+        for (MarkupShape s : shapes) drawCells(ctx, s, vis);
+        if (preview != null) drawCells(ctx, preview, vis);
         if (cull) GL11.glEnable(GL11.GL_CULL_FACE);
-        GL11.glColor4f(1f, 1f, 1f, 1f);
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glDisable(GL11.GL_BLEND);
+        resetGl();
 
         for (MarkupShape s : shapes) if (s.type == MarkupShape.Type.RECT) drawRectLabels(ctx, s, p);
         if (preview != null) drawPreviewLabels(ctx, preview, p);
+        resetGl();
     }
 
-    private static List<double[]> project(MapContext ctx, List<double[]> world) {
-        List<double[]> o = new ArrayList<>(world.size());
-        for (double[] w : world) o.add(MapProjection.worldToScreen(ctx, w[0], w[1]));
-        return o;
+    private static void resetGl() {
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_BLEND);
     }
 
-    private static void color(int rgb, int alpha) {
-        GL11.glColor4f((rgb >> 16 & 255) / 255f, (rgb >> 8 & 255) / 255f, (rgb & 255) / 255f, alpha / 255f);
-    }
-
-    private static void drawShape(MapContext ctx, MarkupShape s) {
+    private static void drawCells(final MapContext ctx, MarkupShape s, double[] vis) {
         if (s.points.isEmpty()) return;
-        List<double[]> pts = project(ctx, s.outline());
-        if (s.filled && pts.size() >= 3) {
-            color(s.color, MarkupShape.FILL_ALPHA);
-            GL11.glBegin(GL11.GL_TRIANGLE_FAN); // rectangles and ellipses are convex
-            for (double[] q : pts) GL11.glVertex2d(q[0], q[1]);
-            GL11.glEnd();
-        }
-        // thin dark halo under the stroke so it reads on any terrain colour
-        color(0x000000, 0x70);
-        stroke(pts, s.isClosed(), s.width + 2);
-        color(s.color, 255);
-        stroke(pts, s.isClosed(), s.width);
-    }
-
-    static void stroke(List<double[]> pts, boolean closed, double width) {
-        double h = width / 2.0;
-        int n = pts.size();
-        if (n == 1) {
-            disc(pts.get(0), Math.max(h, 1));
-            return;
-        }
-        int segs = closed ? n : n - 1;
+        BlockCells cells = s.cells();
+        if (cells.isEmpty()) return;
+        final int minX = (int) Math.floor(vis[0]) - 1, maxX = (int) Math.ceil(vis[2]) + 1;
+        int rgb = s.color;
+        GL11.glColor4f((rgb >> 16 & 255) / 255f, (rgb >> 8 & 255) / 255f, (rgb & 255) / 255f, MarkupShape.CELL_ALPHA / 255f);
         GL11.glBegin(GL11.GL_QUADS);
-        for (int i = 0; i < segs; i++) {
-            double[] a = pts.get(i), b = pts.get((i + 1) % n);
-            double dx = b[0] - a[0], dy = b[1] - a[1];
-            double len = Math.hypot(dx, dy);
-            if (len < 1e-6) continue;
-            double nx = -dy / len * h, ny = dx / len * h;
-            GL11.glVertex2d(a[0] + nx, a[1] + ny);
-            GL11.glVertex2d(b[0] + nx, b[1] + ny);
-            GL11.glVertex2d(b[0] - nx, b[1] - ny);
-            GL11.glVertex2d(a[0] - nx, a[1] - ny);
-        }
-        GL11.glEnd();
-        if (width >= 2.5) for (double[] q : pts) disc(q, h); // round joins
-    }
-
-    private static void disc(double[] c, double r) {
-        GL11.glBegin(GL11.GL_TRIANGLE_FAN);
-        GL11.glVertex2d(c[0], c[1]);
-        for (int i = 0; i <= 10; i++) {
-            double a = i * Math.PI * 2 / 10;
-            GL11.glVertex2d(c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r);
-        }
+        cells.forEachSpan((int) Math.floor(vis[1]) - 1, (int) Math.ceil(vis[3]) + 1, (z, x0, x1) -> {
+            if (x1 < minX || x0 > maxX) return;
+            int a = Math.max(x0, minX), b = Math.min(x1, maxX) + 1; // block edges [a, b) x [z, z+1)
+            double[] p0 = MapProjection.worldToScreen(ctx, a, z);
+            double[] p1 = MapProjection.worldToScreen(ctx, b, z);
+            double[] p2 = MapProjection.worldToScreen(ctx, b, z + 1);
+            double[] p3 = MapProjection.worldToScreen(ctx, a, z + 1);
+            GL11.glVertex2d(p0[0], p0[1]);
+            GL11.glVertex2d(p1[0], p1[1]);
+            GL11.glVertex2d(p2[0], p2[1]);
+            GL11.glVertex2d(p3[0], p3[1]);
+        });
         GL11.glEnd();
     }
 
     // ------------------------------------------------------------------ labels (screen space, always upright)
 
+    /** Label box colour: near-opaque black. */
+    public static final int LABEL_BG = 0xE0000000;
+    public static final int LABEL_PAD = 3;
+
+    /**
+     * A readable label: bright text with a shadow on a near-opaque dark box. alignX/Y: -1 = left/above the point,
+     * 1 = right/below, 0 = centred. Text colours are always 0xFFRRGGBB (alpha 0 would mean opaque to the b1.7.3
+     * font renderer), and the GL colour / texture / blend state is reset before the text.
+     */
     static void label(NAPainter p, String text, double x, double y, int alignX, int alignY, int color) {
         int w = p.getStringWidth(text);
-        int tx = (int) Math.round(alignX > 0 ? x + 3 : alignX < 0 ? x - 3 - w : x - w / 2.0);
-        int ty = (int) Math.round(alignY > 0 ? y + 3 : alignY < 0 ? y - 11 : y - 4);
-        p.drawRect(tx - 2, ty - 2, tx + w + 1, ty + 9, 0xB0000000);
-        p.drawString(text, tx, ty, color, true);
+        int pad = LABEL_PAD, gap = 2;
+        int tx = (int) Math.round(alignX > 0 ? x + gap + pad : alignX < 0 ? x - gap - pad - w : x - w / 2.0);
+        int ty = (int) Math.round(alignY > 0 ? y + gap + pad : alignY < 0 ? y - gap - pad - 8 : y - 4);
+        p.drawRect(tx - pad, ty - pad, tx + w + pad, ty + 8 + pad, LABEL_BG);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        p.drawStringWithShadow(text, tx, ty, 0xFF000000 | color);
+        GL11.glDisable(GL11.GL_BLEND);
     }
 
-    private static int textColor(int rgb) {
-        // keep labels readable: very dark colours get white text
+    /** The shape colour lightened towards white (always opaque), so it reads on the dark label box. */
+    public static int labelColor(int rgb) {
         int r = rgb >> 16 & 255, g = rgb >> 8 & 255, b = rgb & 255;
-        return (r * 3 + g * 6 + b) / 10 < 70 ? 0xFFFFFFFF : 0xFF000000 | rgb;
+        r = r + (255 - r) * 55 / 100;
+        g = g + (255 - g) * 55 / 100;
+        b = b + (255 - b) * 55 / 100;
+        return 0xFF000000 | r << 16 | g << 8 | b;
     }
 
     static void drawRectLabels(MapContext ctx, MarkupShape s, NAPainter p) {
-        double[] box = s.box();
+        if (s.points.size() < 2) return;
+        double[] box = s.box(); // outer edges of the corner cells
         int[][] corners = MarkupGeometry.cornerBlocks(box);
         int[] size = MarkupGeometry.sizeBlocks(box);
         double[][] world = {{box[0], box[1]}, {box[2], box[1]}, {box[0], box[3]}, {box[2], box[3]}};
@@ -121,7 +108,7 @@ public final class MarkupRenderer {
         double screenW = Math.hypot(scr[1][0] - scr[0][0], scr[1][1] - scr[0][1]);
         double screenH = Math.hypot(scr[2][0] - scr[0][0], scr[2][1] - scr[0][1]);
         boolean all = screenW >= 70 && screenH >= 24; // tiny rectangles: only two opposite corners
-        int col = textColor(s.color);
+        int col = labelColor(s.color);
         for (int i = 0; i < 4; i++) {
             if (!all && (i == 1 || i == 2)) continue;
             int ax = scr[i][0] >= c[0] ? 1 : -1;
@@ -137,6 +124,7 @@ public final class MarkupRenderer {
                 drawRectLabels(ctx, s, p);
                 break;
             case ELLIPSE: {
+                if (s.points.size() < 2) break;
                 double[] box = s.box();
                 int[] size = MarkupGeometry.sizeBlocks(box);
                 double[] c = MapProjection.worldToScreen(ctx, (box[0] + box[2]) / 2, (box[1] + box[3]) / 2);
@@ -148,9 +136,10 @@ public final class MarkupRenderer {
                 double[] a = s.points.get(0), b = s.points.get(1);
                 double[] sa = MapProjection.worldToScreen(ctx, a[0], a[1]);
                 double[] sb = MapProjection.worldToScreen(ctx, b[0], b[1]);
-                label(p, (int) Math.floor(a[0]) + ", " + (int) Math.floor(a[1]), sa[0], sa[1], sa[0] <= sb[0] ? -1 : 1, sa[1] <= sb[1] ? -1 : 1, 0xFFFFFFFF);
-                label(p, (int) Math.floor(b[0]) + ", " + (int) Math.floor(b[1]), sb[0], sb[1], sb[0] > sa[0] ? 1 : -1, sb[1] > sa[1] ? 1 : -1, 0xFFFFFFFF);
-                label(p, String.format("%.1f blocks", MarkupGeometry.length(a, b)), (sa[0] + sb[0]) / 2, (sa[1] + sb[1]) / 2, 0, 0, 0xFFFFFFFF);
+                int col = labelColor(s.color);
+                label(p, (int) Math.floor(a[0]) + ", " + (int) Math.floor(a[1]), sa[0], sa[1], sa[0] <= sb[0] ? -1 : 1, sa[1] <= sb[1] ? -1 : 1, col);
+                label(p, (int) Math.floor(b[0]) + ", " + (int) Math.floor(b[1]), sb[0], sb[1], sb[0] > sa[0] ? 1 : -1, sb[1] > sa[1] ? 1 : -1, col);
+                label(p, s.cells().count() + " blocks", (sa[0] + sb[0]) / 2, (sa[1] + sb[1]) / 2, 0, 0, 0xFFFFFFFF);
                 break;
             }
             default:

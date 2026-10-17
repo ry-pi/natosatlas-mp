@@ -32,6 +32,7 @@ import dev.natowb.natosatlas.client.ui.elements.UIElementToolButton;
 import dev.natowb.natosatlas.client.ui.screens.map.markup.MarkupGeometry;
 import dev.natowb.natosatlas.client.ui.screens.map.markup.MarkupModel;
 import dev.natowb.natosatlas.client.ui.screens.map.markup.MarkupRenderer;
+import dev.natowb.natosatlas.client.ui.screens.map.markup.MarkupRaster;
 import dev.natowb.natosatlas.client.ui.screens.map.markup.MarkupShape;
 import dev.natowb.natosatlas.client.ui.screens.map.markup.MarkupTool;
 import dev.natowb.natosatlas.client.ui.screens.map.markup.MarkupToolbar;
@@ -75,7 +76,7 @@ public class MapScreen extends UIScreen {
     private final MarkupModel markup = new MarkupModel();
     private MarkupTool tool = MarkupTool.RECT;
     private int markupColor = MarkupToolbar.DEFAULT_COLOR;
-    private int markupWidth = 2;
+    private int markupWidth = 1; // mp11: thickness in blocks
     private boolean markupFill = false;
     private MarkupToolbar toolbar = null;
     private MarkupShape drawing = null;
@@ -84,6 +85,7 @@ public class MapScreen extends UIScreen {
     private boolean drawMoved = false;
     private boolean erasing = false;
     private double[] lastPencil = null;
+    private int[] lastErase = null; // mp11: last erased block, so a fast drag erases a connected path
 
     private String toast = "";
     private long toastTime = 0;
@@ -153,15 +155,16 @@ public class MapScreen extends UIScreen {
 
 
 
-        UILayout rightLayout = new UIHorizontalLayout(width - 25, 15, 5, true);
+        // mp11: fixed slots (MapTopBar), so nothing moves when the map mode button is disabled in the Nether
+        java.util.Map<MapTopBar.Slot, int[]> top = MapTopBar.layout(width);
 
 
-        UIElementIconButton waypointsButton = new UIElementIconButton(103, rightLayout, 20, 20, ICON_WAYPOINTS);
+        UIElementIconButton waypointsButton = new UIElementIconButton(103, top.get(MapTopBar.Slot.WAYPOINTS)[0], top.get(MapTopBar.Slot.WAYPOINTS)[1], 20, 20, ICON_WAYPOINTS);
         waypointsButton.setHandler(btn -> NAClient.get().getPlatform().screen.openNacScreen(new WaypointListScreen(this)));
         waypointsButton.setTooltip("Waypoints");
         addButton(waypointsButton);
 
-        UIElementIconButton slimeChunksButton = new UIElementIconButton(104, rightLayout, 20, 20, ICON_SLIME_ENABLED);
+        UIElementIconButton slimeChunksButton = new UIElementIconButton(104, top.get(MapTopBar.Slot.SLIME)[0], top.get(MapTopBar.Slot.SLIME)[1], 20, 20, ICON_SLIME_ENABLED);
         if (!Settings.showSlimeChunks) {
             slimeChunksButton.setIcon(ICON_SLIME_DISABLED);
         }
@@ -177,7 +180,7 @@ public class MapScreen extends UIScreen {
         slimeChunksButton.setTooltip("Toggle Slime Chunks (" + dev.natowb.natosatlas.client.SlimeSeed.describe() + ")");
         addButton(slimeChunksButton);
 
-        UIElementIconButton gridButton = new UIElementIconButton(107, rightLayout, 20, 20, ICON_GRID_ENABLED);
+        UIElementIconButton gridButton = new UIElementIconButton(107, top.get(MapTopBar.Slot.GRID)[0], top.get(MapTopBar.Slot.GRID)[1], 20, 20, ICON_GRID_ENABLED);
         gridButton.setTooltip("Toggle Grid");
 
         if (!Settings.mapGrid) {
@@ -196,7 +199,7 @@ public class MapScreen extends UIScreen {
         addButton(gridButton);
 
 
-        UIElementIconButton entityButton = new UIElementIconButton(105, rightLayout, 20, 20, 5);
+        UIElementIconButton entityButton = new UIElementIconButton(105, top.get(MapTopBar.Slot.ENTITIES)[0], top.get(MapTopBar.Slot.ENTITIES)[1], 20, 20, 5);
 
         entityButton.setTooltip(String.format("Entities: %s", Settings.entityDisplayMode.name()));
         switch (Settings.entityDisplayMode) {
@@ -230,59 +233,46 @@ public class MapScreen extends UIScreen {
         addButton(entityButton);
 
 
-        if (!viewHasCeiling()) {
-            UIElementIconButton modeButton = new UIElementIconButton(105, rightLayout, 20, 20, 5);
-            modeButton.setTooltip(String.format("Mode: %s", Settings.mapRenderMode.name()));
-
-            switch (Settings.mapRenderMode) {
-                case Day:
-                    modeButton.setIcon(ICON_DAY);
-                    break;
-                case Night:
-                    modeButton.setIcon(ICON_NIGHT);
-                    break;
-                case Cave:
-                    modeButton.setIcon(ICON_CAVE);
-                    break;
-                case Auto:
-                    modeButton.setIcon(ICON_AUTO);
-                    break;
-            }
-
-            modeButton.setHandler(btn -> {
-                if (!viewHasCeiling()) {
-                    SettingsOption.MAP_RENDER_MODE.cycle();
-                    modeButton.setTooltip(String.format("Mode: %s", Settings.mapRenderMode.name()));
-
-                    switch (Settings.mapRenderMode) {
-                        case Day:
-                            modeButton.setIcon(ICON_DAY);
-                            break;
-                        case Night:
-                            modeButton.setIcon(ICON_NIGHT);
-                            break;
-                        case Cave:
-                            modeButton.setIcon(ICON_CAVE);
-                            break;
-                        case Auto:
-                            modeButton.setIcon(ICON_AUTO);
-                            break;
-                    }
-                    Settings.save();
-                }
-            });
-            addButton(modeButton);
+        // mp11: the map mode button is always there; in the Nether it is greyed out (the Nether is always the cave map)
+        final boolean ceiling = viewHasCeiling();
+        UIElementIconButton modeButton = new UIElementIconButton(110, top.get(MapTopBar.Slot.MAP_MODE)[0], top.get(MapTopBar.Slot.MAP_MODE)[1], 20, 20, modeIcon());
+        modeButton.setTooltip(MapTopBar.mapModeTooltip(ceiling, Settings.mapRenderMode.name()));
+        if (!MapTopBar.mapModeEnabled(ceiling)) {
+            modeButton.active = false;
+            modeButton.setIcon(ICON_CAVE);
+            modeButton.setColor(MapTopBar.DISABLED_ICON_COLOR);
         }
+        modeButton.setHandler(btn -> {
+            if (viewHasCeiling()) return;
+            SettingsOption.MAP_RENDER_MODE.cycle();
+            modeButton.setTooltip(MapTopBar.mapModeTooltip(false, Settings.mapRenderMode.name()));
+            modeButton.setIcon(modeIcon());
+            Settings.save();
+        });
+        addButton(modeButton);
 
         // mp10: dimension toggle, at the left end of the top-right map buttons (was next to markup in mp9)
         int nextDim = MapDimensions.next(viewDim, playerDim);
-        UIElementIconButton dimButton = new UIElementIconButton(109, rightLayout, 20, 20,
+        UIElementIconButton dimButton = new UIElementIconButton(109, top.get(MapTopBar.Slot.DIMENSION)[0], top.get(MapTopBar.Slot.DIMENSION)[1], 20, 20,
                 viewDim == MapDimensions.NETHER ? ICON_DIM_NETHER : ICON_DIM_OVERWORLD);
         dimButton.setTooltip("Showing: " + MapDimensions.name(viewDim) + " (click for " + MapDimensions.name(nextDim) + ") [D]");
         dimButton.setHandler(btn -> setViewDim(MapDimensions.next(viewDim, playerDim), true));
         addButton(dimButton);
 
         if (markupMode) buildToolbar();
+    }
+
+    private static int modeIcon() {
+        switch (Settings.mapRenderMode) {
+            case Night:
+                return ICON_NIGHT;
+            case Cave:
+                return ICON_CAVE;
+            case Auto:
+                return ICON_AUTO;
+            default:
+                return ICON_DAY;
+        }
     }
 
     private static int[] nextPos(UILayout layout) {
@@ -595,11 +585,9 @@ public class MapScreen extends UIScreen {
     }
 
     private boolean viewHasCeiling() {
-        if (!isForeign()) {
-            NAWorldInfo info = ClientWorldAccess.get().getWorldInfo();
-            return info != null && info.hasCeiling();
-        }
-        return MapDimensions.hasCeiling(viewDim);
+        boolean foreign = isForeign();
+        NAWorldInfo info = foreign ? null : ClientWorldAccess.get().getWorldInfo();
+        return MapTopBar.viewHasCeiling(foreign, info != null && info.hasCeiling(), viewDim);
     }
 
     /** Layer shown for another dimension: cave for the Nether, else the chosen mode (Auto = by time of day). */
@@ -704,8 +692,10 @@ public class MapScreen extends UIScreen {
     private void cancelDrawing() {
         drawing = null;
         drawStart = null;
+        if (erasing) markup.endErase();
         erasing = false;
         lastPencil = null;
+        lastErase = null;
     }
 
     private void saveMarkup() {
@@ -745,7 +735,7 @@ public class MapScreen extends UIScreen {
                     break;
                 case WIDTH:
                     b = new UIElementToolButton(311, c.x, c.y, c.w, c.h, MarkupToolbar.widthIcon(markupWidth), null);
-                    b.setTooltip("Line width: " + markupWidth + " px (click to change) [ and ]");
+                    b.setTooltip("Thickness: " + markupWidth + (markupWidth == 1 ? " block" : " blocks") + " (click to change) [ and ]");
                     b.setHandler(btn -> {
                         markupWidth = MarkupToolbar.nextWidth(markupWidth);
                         buildButtons();
@@ -787,7 +777,7 @@ public class MapScreen extends UIScreen {
         painter.drawRect(t.panelX, t.panelY, t.panelX + t.panelW, t.panelY + t.panelH, 0xE0100010);
         painter.drawRect(t.panelX, t.panelY, t.panelX + t.panelW, t.panelY + 1, 0x805000FF);
         painter.drawRect(t.panelX, t.panelY + t.panelH - 1, t.panelX + t.panelW, t.panelY + t.panelH, 0x805000FF);
-        painter.drawString("Markup", t.panelX + MarkupToolbar.PAD, t.titleY, 0xFFD9D9D9, true);
+        painter.drawStringWithShadow("Markup", t.panelX + MarkupToolbar.PAD, t.titleY, 0xFFFFFFFF);
         // current colour
         painter.drawRect(t.barX, t.barY, t.barX + t.barW, t.barY + MarkupToolbar.BAR, 0xFF000000);
         painter.drawRect(t.barX + 1, t.barY + 1, t.barX + t.barW - 1, t.barY + MarkupToolbar.BAR - 1, 0xFF000000 | markupColor);
@@ -830,6 +820,8 @@ public class MapScreen extends UIScreen {
                 return true;
             case ERASER:
                 erasing = true;
+                lastErase = null;
+                markup.beginErase();
                 eraseAt(x, y);
                 return true;
             default:
@@ -845,7 +837,7 @@ public class MapScreen extends UIScreen {
         drawing = new MarkupShape(type, viewDim, markupColor, markupWidth, markupFill);
         if (type == MarkupShape.Type.PENCIL) {
             drawing.add(w[0], w[1]);
-            lastPencil = new double[]{x, y};
+            lastPencil = new double[]{w[0], w[1]};
         } else {
             updateDrawing(x, y);
         }
@@ -873,9 +865,10 @@ public class MapScreen extends UIScreen {
                 break;
             }
             case PENCIL:
-                if (lastPencil == null || Math.hypot(x - lastPencil[0], y - lastPencil[1]) >= 1.5) {
+                // mp11: one point per block entered; the rasteriser joins them with Bresenham, so there are no gaps
+                if (lastPencil == null || Math.floor(w[0]) != Math.floor(lastPencil[0]) || Math.floor(w[1]) != Math.floor(lastPencil[1])) {
                     drawing.add(w[0], w[1]);
-                    lastPencil = new double[]{x, y};
+                    lastPencil = new double[]{w[0], w[1]};
                 }
                 break;
         }
@@ -915,15 +908,15 @@ public class MapScreen extends UIScreen {
         return true;
     }
 
+    /** mp11: erases the blocks under the eraser (brush = the thickness), joined to the previous position. */
     private void eraseAt(int x, int y) {
-        final MapContext ctx = viewport.getContext();
-        List<MarkupShape> shapes = markup.forDim(viewDim);
-        for (int i = shapes.size() - 1; i >= 0; i--) {
-            if (MarkupGeometry.hits(shapes.get(i), (bx, bz) -> MapProjection.worldToScreen(ctx, bx, bz), x, y, 3)) {
-                markup.remove(shapes.get(i));
-                return;
-            }
-        }
+        MapContext ctx = viewport.getContext();
+        int[] b = MapProjection.screenToBlock(ctx, x, y);
+        java.util.Set<Long> cells = new java.util.HashSet<>();
+        if (lastErase == null) MarkupRaster.brush(b[0], b[1], markupWidth, cells);
+        else MarkupRaster.line(lastErase[0], lastErase[1], b[0], b[1], markupWidth, cells);
+        lastErase = b;
+        markup.erase(viewDim, cells);
     }
 
     /** Markup mode keys; true = handled (not passed on to the map). */
@@ -957,7 +950,7 @@ public class MapScreen extends UIScreen {
         if (keyCode == Keyboard.KEY_LBRACKET || keyCode == Keyboard.KEY_RBRACKET) {
             markupWidth = keyCode == Keyboard.KEY_RBRACKET ? MarkupToolbar.nextWidth(markupWidth) : MarkupToolbar.prevWidth(markupWidth);
             buildButtons();
-            showToast("Line width: " + markupWidth + " px");
+            showToast("Thickness: " + markupWidth + (markupWidth == 1 ? " block" : " blocks"));
             return true;
         }
         return false;

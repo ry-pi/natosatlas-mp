@@ -28,7 +28,7 @@ public class HelpScreen extends UIScreen {
             {"[B]", "Markup mode (draw on the map)"},
             {"Markup [1]-[6]", "Pan, Rect, Ellipse, Line, Pencil, Eraser"},
             {"Markup [Shift]", "Square / circle / 45 degree line"},
-            {"Markup [F], [ and ]", "Fill on/off, line width"},
+            {"Markup [F], [ and ]", "Fill on/off, thickness (blocks)"},
             {"Markup [Ctrl+Z]", "Undo"},
             {"Markup [Ctrl+S]", "Save map + markup as PNG"},
             {"Markup [Esc]", "Close markup and forget it"}
