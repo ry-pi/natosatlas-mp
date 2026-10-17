@@ -67,8 +67,11 @@ public class MapSaver {
     /** mp7: stop the worker and throw away every queued save (stop() alone leaves queued tasks behind). */
     public synchronized void stopAndDiscard() {
         stop();
-        queue.clear();
-        pending.clear();
+        synchronized (pendingLock) {
+            SaveTask t;
+            while ((t = queue.poll()) != null) cache.unpinAfterSave(t.coord.toKey());
+            pending.clear();
+        }
     }
 
     public boolean isRunning() {
@@ -114,8 +117,8 @@ public class MapSaver {
             NARegionPixelData region = cache.getRegion(layer.id, coord);
             if (region == null) continue;
 
-            //FIXME: maybe a better place to put this
-            region.updateTexture();
+            // mp8: the GL texture is refreshed on the render thread when the region is drawn
+            // (NARegionPixelData.markTextureDirty, set by ChunkRenderer), so nothing to upload here.
 
             Path baseDir = NAPaths.getWorldMapStoragePath(layer.id, dim, !isMultiplayer);
             File file = baseDir.resolve("region_" + coord.x + "_" + coord.z + ".png").toFile();
@@ -124,19 +127,27 @@ public class MapSaver {
         }
     }
 
-    private synchronized void enqueueTask(SaveTask task) {
-        if (shutdownRequested) return;
+    // mp8: guards pending + pins against the worker. Separate from 'this' because stopAndDiscard()
+    // holds 'this' while it joins the worker.
+    private final Object pendingLock = new Object();
 
-        String key = task.regionFile.getAbsolutePath();
-        SaveTask existing = pending.get(key);
+    private void enqueueTask(SaveTask task) {
+        synchronized (pendingLock) {
+            if (shutdownRequested) return;
 
-        if (existing != null) {
-            existing.region = task.region;
-            return;
+            String key = task.regionFile.getAbsolutePath();
+            SaveTask existing = pending.get(key);
+
+            if (existing != null) {
+                // not started yet (the worker removes a task from pending before it reads the pixels)
+                existing.region = task.region;
+                return;
+            }
+
+            pending.put(key, task);
+            cache.pinForSave(task.coord.toKey());
+            queue.offer(task);
         }
-
-        pending.put(key, task);
-        queue.offer(task);
     }
 
     private void processTasks() {
@@ -155,8 +166,17 @@ public class MapSaver {
                 continue;
             }
 
-            task.storage.saveRegionBlocking(task.coord, task.region, task.regionFile);
-            pending.remove(task.regionFile.getAbsolutePath());
+            // mp8: leave 'pending' BEFORE reading the pixels. Previously the task stayed in 'pending' while
+            // it was being written, so a change made during the write was merged into this already-running
+            // task and never reached disk. Now such a change queues a fresh save.
+            synchronized (pendingLock) {
+                pending.remove(task.regionFile.getAbsolutePath(), task);
+            }
+            try {
+                task.storage.saveRegionBlocking(task.coord, task.region, task.regionFile);
+            } finally {
+                cache.unpinAfterSave(task.coord.toKey());
+            }
         }
     }
 

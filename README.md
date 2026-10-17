@@ -72,8 +72,8 @@ In True colour mode the grass block keeps its Classic colour and biome tint; all
 1. On the server machine, find the world's region folder: `<server folder>/<level-name>/region/` (Overworld, usually `world/region/`) and `<level-name>/DIM-1/region/` (Nether).
 2. Join the server once with this mod; it creates `.minecraft/natosatlas/servers/<server folder>/import/` and `import/DIM-1/` (server folder = `host-port`, e.g. `100.73.7.65-25567`).
 3. Copy the `r.X.Z.mcr` files into `import/` (Overworld) or `import/DIM-1/` (Nether). Putting them in an `import/region/` subfolder also works. Your files are only read, never changed or deleted.
-4. In-game, stand in that dimension, open the map, press Options, then General, then **Import region files**. Progress (chunks done / total) shows on the settings and map screens. It runs in the background in small slices each tick, and you can keep playing. Press the button again to cancel.
-Chunks your client currently has loaded are left to live scanning. Corrupt chunks or files are skipped and logged. `.mca` (Anvil) files are ignored.
+4. In-game, stand in that dimension, open the map, press Options, then General, then **Import .mcr** (called **Import region files** before mp8). Progress (chunks done / total) shows on the settings and map screens. It runs in the background in small slices each tick, and you can keep playing. Press the button again to cancel.
+Imported chunks overwrite what the map had for them, including the area around you; live scanning then repaints chunks you're near as usual (since mp8). Corrupt chunks or files are skipped and logged. `.mca` (Anvil) files are ignored.
 ## 1.5.4-mp6
 Options > World map > "Slime seed (blank = server seed)": a per-server manual world seed for the slime chunk overlay (number or text seed). Also fixes the slime chunk formula to match b1.7.3's own check exactly (the original was wrong far out on the X axis).
 
@@ -86,6 +86,11 @@ Options > General has three new buttons in the right-hand column:
 On the map screen, **P** saves the full image and **Shift+P** saves the small one (P used to write a blocking `exported_map_layer_N.png` into the server folder).
 Images are cropped to the explored area. Unexplored parts are transparent. Each image records its top-left world block in its PNG comment. Saving runs on a background thread and writes the PNG in strips, so memory stays low. Images over 32768 px on a side are refused with a chat message suggesting the small version. Existing files are never overwritten (`_1`, `_2`, ... is added). Progress and results show in chat and on the options/map screens.
 Tile saves now go to a temp file and are then moved into place, so the export never reads half-written tiles.
+
+## 1.5.4-mp8: import fills the area you're in, "Open folder" button
+- **Fix:** importing no longer leaves a big black square around you. The importer used to skip every chunk your client had loaded, which is the server's whole view-distance square, but live mapping only scans an 8-chunk circle, so the rest of that square stayed blank. Imported chunks now overwrite those too, in memory and on disk, and the map updates right away. Pixels of chunks that aren't in the import are left alone. Live mapping still repaints chunks you're near afterwards.
+- **Safer saving:** a map tile with unsaved changes, or with a save queued or in progress, is never dropped from the in-memory cache, so it can't be reloaded from an older PNG and saved over newer data. A change made while its tile is being written now queues another save instead of being lost. Tile textures re-upload on the next frame they're drawn instead of waiting for the save queue.
+- **Open folder:** Options > General, next to **Import .mcr**. Opens this server's `import/` folder (or `import/DIM-1/` in the Nether) in your file manager, creating `import/` and `import/DIM-1/` if missing. It uses Explorer on Windows, `open` on macOS and `xdg-open` on Linux, falling back to Java's Desktop and then LWJGL's `Sys.openURL` (like vanilla's texture pack folder button). If none of them work, the path is shown under the buttons. Multiplayer only, like the import.
 
 ## Building this fork
 Built with JDK 21. From the repo root:

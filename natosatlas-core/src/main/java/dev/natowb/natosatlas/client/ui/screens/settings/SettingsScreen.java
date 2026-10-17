@@ -168,14 +168,27 @@
                     NAClient.get().getPlatform().screen.openNacScreen(new GenerateScreen(this)));
             addButton(existingButton);
 
+            // mp8: the import row is split: [Import .mcr][Open folder] in the same 150 px as the other buttons
             dev.natowb.natosatlas.client.RegionImporter imp = dev.natowb.natosatlas.client.RegionImporter.get();
+            dev.natowb.natosatlas.client.ui.layout.UIPoint row = layout.next(150, 20);
             UIElementButton importButton =
-                    new UIElementButton(311, layout, 150, 20, imp.isRunning() ? "Cancel import" : "Import region files", isMultiplayer);
+                    new UIElementButton(311, row.x, row.y, 76, 20, imp.isRunning() ? "Stop import" : "Import .mcr");
+            importButton.active = isMultiplayer;
             importButton.setHandler(btn -> {
                 if (imp.isRunning()) imp.cancel(); else imp.start();
                 rebuildContent();
             });
             addButton(importButton);
+
+            UIElementButton openImportButton =
+                    new UIElementButton(316, row.x + 80, row.y, 70, 20, "Open folder");
+            openImportButton.active = isMultiplayer;
+            openImportButton.setHandler(btn -> {
+                dev.natowb.natosatlas.client.RegionImporter.ensureFolders(); // import/ and import/DIM-1/
+                dev.natowb.natosatlas.client.FolderOpener.open(dev.natowb.natosatlas.client.RegionImporter
+                        .getImportDir(ClientWorldAccess.get().getWorldInfo().getDimensionId()));
+            });
+            addButton(openImportButton);
 
             UILayout right = new UIVerticalLayout(width / 2 + 80, headerY + 50, 5);
             UIElementButton saveFull = new UIElementButton(313, right, 150, 20, "Save map image (full)");
@@ -313,7 +326,9 @@
                 java.io.File dir = dev.natowb.natosatlas.client.RegionImporter.getImportDir(dim);
                 p.drawCenteredString("Copy the server's region/*.mcr files into:", width / 2, height - 46, UITheme.TITLE_TEXT);
                 if (dir != null) p.drawCenteredString(dir.getAbsolutePath(), width / 2, height - 36, 0xFFAAAAAA);
-                if (!imp.getStatus().isEmpty()) p.drawCenteredString(imp.getStatus(), width / 2, height - 24, 0xFF55FF55);
+                String folderStatus = dev.natowb.natosatlas.client.FolderOpener.getStatus();
+                if (!folderStatus.isEmpty()) p.drawCenteredString(folderStatus, width / 2, height - 24, 0xFF55FF55);
+                else if (!imp.getStatus().isEmpty()) p.drawCenteredString(imp.getStatus(), width / 2, height - 24, 0xFF55FF55);
             }
 
             if (activeTab == Tab.GENERAL) {

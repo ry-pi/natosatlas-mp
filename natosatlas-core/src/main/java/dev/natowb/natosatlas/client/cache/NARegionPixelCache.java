@@ -30,13 +30,40 @@ public class NARegionPixelCache {
         return instance;
     }
 
+    // mp8: LRU, but a region is never evicted while it has unsaved changes (dirty) or a save queued /
+    // in progress (pinned by MapSaver). Evicting such a region made the next getRegion() reload the
+    // older PNG from disk; updates then went into that stale copy, which was later saved over the newer
+    // data (e.g. a big import). Trimmed by hand in trim() instead of removeEldestEntry, which can only
+    // look at the single eldest entry.
     private final Map<Long, NARegionPixelData[]> regions =
-            new LinkedHashMap<Long, NARegionPixelData[]>(CACHE_SIZE, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<Long, NARegionPixelData[]> eldest) {
-                    return size() > CACHE_SIZE;
-                }
-            };
+            new LinkedHashMap<Long, NARegionPixelData[]>(CACHE_SIZE, 0.75f, true);
+
+    // region key -> number of save tasks queued/running for it (written by the save worker too)
+    private final java.util.concurrent.ConcurrentHashMap<Long, Integer> savePins = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** mp8: called by MapSaver when it queues a save of this region (any layer). */
+    public void pinForSave(long key) {
+        savePins.merge(key, 1, Integer::sum);
+    }
+
+    /** mp8: called by the save worker when that save has been written (or discarded). */
+    public void unpinAfterSave(long key) {
+        savePins.computeIfPresent(key, (k, v) -> v <= 1 ? null : v - 1);
+    }
+
+    public boolean isPinned(long key) {
+        return dirtySet.contains(key) || savePins.containsKey(key);
+    }
+
+    private void trim() {
+        if (regions.size() <= CACHE_SIZE) return;
+        Iterator<Map.Entry<Long, NARegionPixelData[]>> it = regions.entrySet().iterator();
+        while (regions.size() > CACHE_SIZE && it.hasNext()) {
+            Map.Entry<Long, NARegionPixelData[]> e = it.next(); // eldest first; iterating does not reorder
+            if (isPinned(e.getKey())) continue;
+            it.remove();
+        }
+    }
 
 
     public NARegionPixelData getOrCreateRegion(int layerId, NACoord region) {
@@ -67,7 +94,9 @@ public class NARegionPixelCache {
             }
 
             arr[layerId] = loaded.get();
-            return arr[layerId];
+            NARegionPixelData r = arr[layerId];
+            trim();
+            return r;
         }
 
         return null;
@@ -77,6 +106,7 @@ public class NARegionPixelCache {
         long key = coord.toKey();
         NARegionPixelData[] arr = regions.computeIfAbsent(key, k -> new NARegionPixelData[LayerRegistry.getLayers().size()]);
         arr[layerId] = region;
+        trim();
     }
 
     public void markDirty(NACoord coord) {
@@ -101,6 +131,7 @@ public class NARegionPixelCache {
         regions.clear();
         dirtyQueue.clear();
         dirtySet.clear();
+        savePins.clear();
     }
 
     /** mp7: like clear(), but also frees the GL textures (call on the render thread). */

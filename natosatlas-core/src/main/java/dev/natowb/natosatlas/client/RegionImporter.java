@@ -25,7 +25,7 @@ public final class RegionImporter {
     private static final long BUDGET_NANOS = 6_000_000L;
 
     private final ArrayDeque<Object[]> queue = new ArrayDeque<>(); // {File, int lx, int lz, int rx, int rz}
-    private int total, done, skippedLoaded, failed;
+    private int total, done, failed;
     private boolean running;
     private int dim;
     private String status = "";
@@ -96,7 +96,7 @@ public final class RegionImporter {
             for (int[] c : chunks) queue.add(new Object[]{f, c[0], c[1], rc[0], rc[1]});
         }
         total = queue.size();
-        done = skippedLoaded = failed = 0;
+        done = failed = 0;
         running = total > 0;
         status = running ? "Import: 0 / " + total + " chunks"
                 : "Import: no .mcr files in " + (dir == null ? "import folder" : dir.getAbsolutePath());
@@ -121,8 +121,10 @@ public final class RegionImporter {
             NACoord coord = NACoord.from((Integer) t[3] * 32 + lx, (Integer) t[4] * 32 + lz);
             done++;
             try {
-                // live data wins: don't overwrite chunks the client currently has loaded
-                if (ClientWorldAccess.get().getChunk(coord) != null) { skippedLoaded++; continue; }
+                // mp8: no longer skips chunks the client has loaded. The server keeps a whole view-distance
+                // square of chunks loaded around the player, but live mapping only scans an 8-chunk circle,
+                // so skipping them left a big unexplored (black) square around the player after an import.
+                // Imported pixels now overwrite those chunks too; live scanning repaints the circle as usual.
                 ChunkWrapper w = McRegionReader.readChunk(f, lx, lz);
                 if (w == null) { failed++; continue; }
                 MapUpdater.get().updateChunk(coord, w);
@@ -134,8 +136,7 @@ public final class RegionImporter {
         status = "Import: " + done + " / " + total + " chunks";
         if (queue.isEmpty()) {
             running = false;
-            status = "Import done: " + (done - failed - skippedLoaded) + " imported, " + skippedLoaded
-                    + " kept live, " + failed + " unreadable";
+            status = "Import done: " + (done - failed) + " chunks imported, " + failed + " unreadable";
             LogUtil.info("[Import] {}", status);
         }
     }

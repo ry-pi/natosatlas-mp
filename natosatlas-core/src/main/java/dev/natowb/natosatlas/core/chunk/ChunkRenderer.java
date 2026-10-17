@@ -27,5 +27,6 @@ public class ChunkRenderer {
                 pixels[pixelRow + regionBlockOffsetX + localX] = color;
             }
         }
+        region.markTextureDirty(); // mp8: visible on the next frame, not only once the save queue gets to it
     }
 }
