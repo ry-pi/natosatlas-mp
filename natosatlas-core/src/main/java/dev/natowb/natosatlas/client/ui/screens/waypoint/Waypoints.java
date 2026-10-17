@@ -24,6 +24,19 @@ public final class Waypoints {
         return new File(NAPaths.getWorldDataPath().toFile(), fileName);
     }
 
+    /**
+     * mp9: the waypoints saved for another dimension, read-only (for viewing that dimension on the world map).
+     * Does not touch the live list, and does not create the file if it doesn't exist.
+     */
+    public static List<Waypoint> readDimension(int dim) {
+        if (NAPaths.getWorldDataPath() == null) return new java.util.ArrayList<>();
+        File f = new File(NAPaths.getWorldDataPath().toFile(), String.format("%s.DIM%d.points", NAPaths.getWorldSaveName(), dim));
+        if (!f.exists()) return new java.util.ArrayList<>();
+        WaypointStorage s = new WaypointStorage();
+        s.load(f);
+        return new java.util.ArrayList<>(s.getAll());
+    }
+
     public static void load() {
         STORAGE.load(getFile());
         LogUtil.debug("Loaded {} waypoints", STORAGE.getAll().size());

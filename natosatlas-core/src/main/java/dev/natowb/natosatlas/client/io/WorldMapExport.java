@@ -88,20 +88,26 @@ public final class WorldMapExport {
     /** Render thread. */
     public static void start(final boolean small, final int layerId) {
         NAWorldInfo info = ClientWorldAccess.get().getWorldInfo();
+        if (info == null) return;
+        start(small, layerId, info.getDimensionId());
+    }
+
+    /** mp9: render thread; dim = the dimension the world map is showing (may differ from the player's). */
+    public static void start(final boolean small, final int layerId, final int dim) {
+        NAWorldInfo info = ClientWorldAccess.get().getWorldInfo();
         if (info == null || NAPaths.getMinecraftPath() == null || NAPaths.getWorldDataPath() == null) return;
         if (!BUSY.compareAndSet(false, true)) {
             post("Still saving the last map image, please wait");
             return;
         }
         try {
-            final int dim = info.getDimensionId();
             final boolean mp = info.isMultiplayer();
             final File tileDir = NAPaths.getWorldMapStoragePath(layerId, dim, !mp).toFile();
             final File shots = new File(NAPaths.getMinecraftPath().toFile(), "screenshots");
             final String ts = WorldMapImage.timestamp(new Date());
 
             // write tiles that only exist in memory so far (needs the GL thread for updateTexture)
-            MapSaver.get().flushAll(dim, mp);
+            if (dim == info.getDimensionId()) MapSaver.get().flushAll(dim, mp);
 
             post("Saving world map" + (small ? " (small)" : "") + "...");
             Thread t = new Thread(() -> run(small, layerId, tileDir, shots, ts), "NA-MapImage");

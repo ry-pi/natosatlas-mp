@@ -92,6 +92,22 @@ Tile saves now go to a temp file and are then moved into place, so the export ne
 - **Safer saving:** a map tile with unsaved changes, or with a save queued or in progress, is never dropped from the in-memory cache, so it can't be reloaded from an older PNG and saved over newer data. A change made while its tile is being written now queues another save instead of being lost. Tile textures re-upload on the next frame they're drawn instead of waiting for the save queue.
 - **Open folder:** Options > General, next to **Import .mcr**. Opens this server's `import/` folder (or `import/DIM-1/` in the Nether) in your file manager, creating `import/` and `import/DIM-1/` if missing. It uses Explorer on Windows, `open` on macOS and `xdg-open` on Linux, falling back to Java's Desktop and then LWJGL's `Sys.openURL` (like vanilla's texture pack folder button). If none of them work, the path is shown under the buttons. Multiplayer only, like the import.
 
+## 1.5.4-mp9: dimension toggle, markup mode
+**Dimension toggle.** The world map's top-left row has a new button (or press **D**) that switches the map between the Overworld and the Nether without moving you. The other dimension is drawn from its saved tiles and waypoints, read-only: live mapping keeps writing only to the dimension you're actually in, and the import still uses your dimension. The view stays on the matching place (x8 or /8), your arrow is replaced by a see-through "ghost" at your converted position, a "Viewing: Nether (you are in the Overworld)" label shows at the top, and the bottom bar shows the matching coordinates in your dimension. Space centres on the ghost. You can't add waypoints there. P / Shift+P save the dimension you're viewing. Going through a portal while the map is open switches the view back to where you are.
+
+**Markup mode.** The pencil button next to it (or **B**) opens a toolbar on the left, laid out like Paint.NET's Tools panel and drawn with the map's own buttons:
+
+<p align="center"><img src="assets/mp9-toolbar-preview.png" width="70%" alt="Markup toolbar"></p>
+
+- Tools (**1**-**6**): Pan, Rectangle, Ellipse, Line, Pencil, Eraser. Rectangles snap to whole blocks and show the block coordinates of all four corners plus the size (e.g. `63 x 34`), while drawing and afterwards. Lines show their length while drawing. Hold **Shift** for squares, circles and 45 degree lines.
+- Fill on/off (**F**), line width 1/2/3/5 px (**[** and **]**), Undo (**Ctrl+Z**), Clear all (undoable), Save (**Ctrl+S**), Close (X).
+- Colour: 16 colour palette under the tools; the bar above it is the current colour.
+- Shapes are stored in world coordinates, so they stay in place when you pan, zoom or rotate. Right drag still rotates and middle drag pans with any tool.
+- **Save** writes the map (the dimension and mode shown) around your markup, plus a margin, with the markup and corner coordinates drawn on it, to `.minecraft/screenshots/worldmap-markup-yyyy-MM-dd_HH.mm.ss.png`: up to 8 px per block, 4096 px max per side, north up. With no markup it saves the area on screen.
+- Markup lives in memory only: **Esc** (or the X, or closing the map) closes markup mode and forgets it unless you saved it. The first Esc closes markup; the next one closes the map.
+
+Also fixed: the coordinates at the bottom of the map (and new waypoints from a double click) were one block off towards +X/+Z; they now show the block under the cursor. Waypoints are reloaded when you change dimension, so a death or temp waypoint can no longer write the old dimension's list into the new dimension's file. Middle drag pans the map.
+
 ## Building this fork
 Built with JDK 21. From the repo root:
 ```bash

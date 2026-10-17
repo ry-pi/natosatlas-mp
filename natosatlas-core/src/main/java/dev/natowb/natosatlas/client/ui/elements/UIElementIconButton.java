@@ -36,6 +36,11 @@ public class UIElementIconButton extends UIElementButton {
     @Override
     public void render(int mouseX, int mouseY) {
         super.render(mouseX, mouseY);
+        renderIconOnly();
+    }
+
+    /** mp9: the icon without the button background. */
+    protected void renderIconOnly() {
         NAPainter p = NAClient.get().getPlatform().painter;
         int size = Math.min(w, h) - 6;
         int ix = x + (w - size) / 2;

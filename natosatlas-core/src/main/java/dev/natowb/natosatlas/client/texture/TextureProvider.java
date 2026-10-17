@@ -42,6 +42,23 @@ public final class TextureProvider {
     public static final int ICON_ENTITY_ALL = 20;
     public static final int ICON_ENTITY_NONE = 21;
 
+    // mp9: world map dimension toggle + markup toolbar
+    public static final int ICON_MARKUP = 22;
+    public static final int ICON_DIM_OVERWORLD = 23;
+    public static final int ICON_DIM_NETHER = 24;
+    public static final int ICON_TOOL_PAN = 25;
+    public static final int ICON_TOOL_RECT = 26;
+    public static final int ICON_TOOL_ELLIPSE = 27;
+    public static final int ICON_TOOL_LINE = 28;
+    public static final int ICON_TOOL_PENCIL = 29;
+    public static final int ICON_TOOL_ERASER = 30;
+    public static final int ICON_UNDO = 31;
+    public static final int ICON_CLEAR = 32;
+    public static final int ICON_SAVE = 33;
+    public static final int ICON_FILL_ON = 34;
+    public static final int ICON_FILL_OFF = 35;
+    public static final int ICON_WIDTH_1 = 36; // 36..39 = stroke widths 1, 2, 3, 5
+
 
     private TextureProvider() {
     }

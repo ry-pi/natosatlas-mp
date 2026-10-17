@@ -19,7 +19,7 @@ public class MapStageSlime implements MapStage {
         final long seed = dev.natowb.natosatlas.client.SlimeSeed.getEffectiveSeed(); // mp6: custom seed override, read once per draw
         for (long key : visibleRegions) {
             NACoord coord = NACoord.fromKey(key);
-            int texId = TextureProvider.getTexture(coord, activeLayer);
+            int texId = (ctx.tiles != null ? ctx.tiles.getTexture(coord, activeLayer) : TextureProvider.getTexture(coord, activeLayer));
             if (texId != -1) {
                 for (int x = 0; x < CHUNKS_PER_MINECRAFT_REGION; x++) {
                     for (int z = 0; z < CHUNKS_PER_MINECRAFT_REGION; z++) {

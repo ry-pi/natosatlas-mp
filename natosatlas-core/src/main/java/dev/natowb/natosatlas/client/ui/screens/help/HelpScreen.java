@@ -22,8 +22,19 @@ public class HelpScreen extends UIScreen {
             {"[R Mouse DBClick]", "Temp Waypoint"},
             {"[Mouse Wheel]", "Zoom in/out"},
             {"[Space]", "Reset camera"},
-            {"[P]", "Export current map layer"}
+            {"[P] / [Shift+P]", "Save map image (full / small)"},
+            {"[Middle Mouse Drag]", "Pan the map"},
+            {"[D]", "Show Overworld / Nether map"},
+            {"[B]", "Markup mode (draw on the map)"},
+            {"Markup [1]-[6]", "Pan, Rect, Ellipse, Line, Pencil, Eraser"},
+            {"Markup [Shift]", "Square / circle / 45 degree line"},
+            {"Markup [F], [ and ]", "Fill on/off, line width"},
+            {"Markup [Ctrl+Z]", "Undo"},
+            {"Markup [Ctrl+S]", "Save map + markup as PNG"},
+            {"Markup [Esc]", "Close markup and forget it"}
     };
+
+    private int lineH = 18; // mp9: tighter rows when the screen is short
 
     public HelpScreen(UIScreen parent) {
         super(parent);
@@ -35,7 +46,8 @@ public class HelpScreen extends UIScreen {
 
         int headerHeight = 20;
         int headerGap = 10;
-        int contentHeight = entries.length * 18 + 40;
+        lineH = Math.max(10, Math.min(18, (height - 80) / entries.length));
+        int contentHeight = entries.length * lineH + 40;
 
         int totalHeight = headerHeight + headerGap + contentHeight;
         int contentTop = (height - totalHeight) / 2;
@@ -79,7 +91,7 @@ public class HelpScreen extends UIScreen {
             painter.drawString(key, keyX, y, 0xCCCCCC);
             painter.drawString(desc, descX, y, 0xCCCCCC);
 
-            y += 18;
+            y += lineH;
         }
 
         super.render(mouseX, mouseY, delta, scaleInfo);

@@ -152,6 +152,24 @@ public class MapStageEntities implements MapStage {
     }
 
 
+    /**
+     * mp9: the player's position converted into another dimension (x8 / /8) while the world map shows that
+     * dimension: a see-through copy of the player arrow.
+     */
+    public void drawGhostPlayer(MapContext ctx, double blockX, double blockZ, double yaw) {
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, NAClient.get().getPlatform().painter.getMinecraftTextureId("/misc/mapicons.png"));
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        double x = blockX * NAConstants.PIXELS_PER_CANVAS_UNIT;
+        double z = blockZ * NAConstants.PIXELS_PER_CANVAS_UNIT;
+        double s = 6 / ctx.zoom;
+        drawPlayerMarker(x, z, s, yaw, () ->
+                NAClient.get().getPlatform().painter.drawTexturedQuad(0x90C0A0FF, 0f, 0f, 0.25f, 0.25f)
+        );
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+        GL11.glDisable(GL11.GL_BLEND);
+    }
+
     private void drawPlayerMarker(double worldX, double worldZ, double scale, double yaw, Runnable draw) {
         GL11.glPushMatrix();
         GL11.glTranslated(worldX, worldZ, 0);

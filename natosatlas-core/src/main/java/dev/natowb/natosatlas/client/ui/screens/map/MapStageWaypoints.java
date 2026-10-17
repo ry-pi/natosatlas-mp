@@ -12,6 +12,12 @@ import java.util.Set;
 public class MapStageWaypoints implements MapStage {
 
     public boolean showLabels = true;
+    /** mp9: waypoints to draw instead of the live list (another dimension's, read-only); null = live list. */
+    public java.util.List<Waypoint> source = null;
+
+    private java.util.List<Waypoint> list() {
+        return source != null ? source : Waypoints.getAll();
+    }
 
     @Override
     public void draw(MapContext ctx, Set<Long> visibleRegions, int activeLayer) {
@@ -25,7 +31,7 @@ public class MapStageWaypoints implements MapStage {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D,
                 NAClient.get().getPlatform().painter.getMinecraftTextureId("/misc/mapicons.png"));
 
-        for (Waypoint wp : Waypoints.getAll()) {
+        for (Waypoint wp : list()) {
             if (!wp.visible) continue;
 
             NAEntity e = new NAEntity(wp.x, wp.y, wp.z, 0, NAEntity.NAEntityType.Waypoint);
@@ -53,7 +59,7 @@ public class MapStageWaypoints implements MapStage {
     }
 
     private void drawWaypointLabels(MapContext ctx) {
-        for (Waypoint wp : Waypoints.getAll()) {
+        for (Waypoint wp : list()) {
             if (!wp.visible) continue;
 
             double x = wp.x * NAConstants.PIXELS_PER_CANVAS_UNIT;

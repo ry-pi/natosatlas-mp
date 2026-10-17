@@ -247,7 +247,8 @@ public final class WorldMapImage {
         return dst;
     }
 
-    private static boolean readTile(File f, int[] into) {
+    /** Reads a stored 512x512 tile into {@code into}; false if missing or unreadable. mp9: public (markup image). */
+    public static boolean readTile(File f, int[] into) {
         try {
             BufferedImage img = ImageIO.read(f);
             if (img == null || img.getWidth() < REGION || img.getHeight() < REGION) return false;

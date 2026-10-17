@@ -137,6 +137,9 @@ public class NAClient implements NAClientSession {
     private void onDimensionChange(int newDim) {
         LogUtil.info("[Client] Changed dimension (dim={})", newDim);
         NARegionPixelCache.get().clear();
+        // mp9: waypoints are per dimension (DIMn.points); reload them, otherwise the next save (death point,
+        // temp point reached) wrote the old dimension's list into the new dimension's file.
+        Waypoints.load();
     }
 
     private void onWorldTick() {

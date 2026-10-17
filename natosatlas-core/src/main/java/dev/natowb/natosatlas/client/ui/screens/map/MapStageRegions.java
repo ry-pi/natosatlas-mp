@@ -14,7 +14,7 @@ public class MapStageRegions implements MapStage {
     public void draw(MapContext ctx, Set<Long> visibleRegions, int layerId) {
         for (long key : visibleRegions) {
             NACoord coord = NACoord.fromKey(key);
-            int texId = TextureProvider.getTexture(coord, layerId);
+            int texId = (ctx.tiles != null ? ctx.tiles.getTexture(coord, layerId) : TextureProvider.getTexture(coord, layerId));
             if (texId != -1) {
                 drawRegionTexture(coord.x, coord.z, texId);
             }

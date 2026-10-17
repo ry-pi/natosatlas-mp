@@ -8,4 +8,6 @@ public class MapContext {
     public float zoom = 1.0f;
     public int mouseX, mouseY;
     public float rotation = 0f;
+    /** mp9: null = the live cache of the player's dimension; otherwise saved tiles of another dimension. */
+    public MapTileSource tiles = null;
 }
