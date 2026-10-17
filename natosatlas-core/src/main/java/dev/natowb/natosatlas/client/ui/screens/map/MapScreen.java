@@ -151,14 +151,6 @@ public class MapScreen extends UIScreen {
         });
         addButton(markupButton);
 
-        // mp9: dimension toggle
-        p = nextPos(leftLayout);
-        int nextDim = MapDimensions.next(viewDim, playerDim);
-        UIElementIconButton dimButton = new UIElementIconButton(109, p[0], p[1], 20, 20,
-                viewDim == MapDimensions.NETHER ? ICON_DIM_NETHER : ICON_DIM_OVERWORLD);
-        dimButton.setTooltip("Showing: " + MapDimensions.name(viewDim) + " (click for " + MapDimensions.name(nextDim) + ") [D]");
-        dimButton.setHandler(btn -> setViewDim(MapDimensions.next(viewDim, playerDim), true));
-        addButton(dimButton);
 
 
         UILayout rightLayout = new UIHorizontalLayout(width - 25, 15, 5, true);
@@ -281,6 +273,14 @@ public class MapScreen extends UIScreen {
             });
             addButton(modeButton);
         }
+
+        // mp10: dimension toggle, at the left end of the top-right map buttons (was next to markup in mp9)
+        int nextDim = MapDimensions.next(viewDim, playerDim);
+        UIElementIconButton dimButton = new UIElementIconButton(109, rightLayout, 20, 20,
+                viewDim == MapDimensions.NETHER ? ICON_DIM_NETHER : ICON_DIM_OVERWORLD);
+        dimButton.setTooltip("Showing: " + MapDimensions.name(viewDim) + " (click for " + MapDimensions.name(nextDim) + ") [D]");
+        dimButton.setHandler(btn -> setViewDim(MapDimensions.next(viewDim, playerDim), true));
+        addButton(dimButton);
 
         if (markupMode) buildToolbar();
     }

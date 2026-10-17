@@ -93,9 +93,9 @@ Tile saves now go to a temp file and are then moved into place, so the export ne
 - **Open folder:** Options > General, next to **Import .mcr**. Opens this server's `import/` folder (or `import/DIM-1/` in the Nether) in your file manager, creating `import/` and `import/DIM-1/` if missing. It uses Explorer on Windows, `open` on macOS and `xdg-open` on Linux, falling back to Java's Desktop and then LWJGL's `Sys.openURL` (like vanilla's texture pack folder button). If none of them work, the path is shown under the buttons. Multiplayer only, like the import.
 
 ## 1.5.4-mp9: dimension toggle, markup mode
-**Dimension toggle.** The world map's top-left row has a new button (or press **D**) that switches the map between the Overworld and the Nether without moving you. The other dimension is drawn from its saved tiles and waypoints, read-only: live mapping keeps writing only to the dimension you're actually in, and the import still uses your dimension. The view stays on the matching place (x8 or /8), your arrow is replaced by a see-through "ghost" at your converted position, a "Viewing: Nether (you are in the Overworld)" label shows at the top, and the bottom bar shows the matching coordinates in your dimension. Space centres on the ghost. You can't add waypoints there. P / Shift+P save the dimension you're viewing. Going through a portal while the map is open switches the view back to where you are.
+**Dimension toggle.** A new button (or press **D**; since mp10 it sits at the left end of the top-right row of map buttons) that switches the map between the Overworld and the Nether without moving you. The other dimension is drawn from its saved tiles and waypoints, read-only: live mapping keeps writing only to the dimension you're actually in, and the import still uses your dimension. The view stays on the matching place (x8 or /8), your arrow is replaced by a see-through "ghost" at your converted position, a "Viewing: Nether (you are in the Overworld)" label shows at the top, and the bottom bar shows the matching coordinates in your dimension. Space centres on the ghost. You can't add waypoints there. P / Shift+P save the dimension you're viewing. Going through a portal while the map is open switches the view back to where you are.
 
-**Markup mode.** The pencil button next to it (or **B**) opens a toolbar on the left, laid out like Paint.NET's Tools panel and drawn with the map's own buttons:
+**Markup mode.** The pencil button after Help in the top-left row (or **B**) opens a toolbar on the left, laid out like Paint.NET's Tools panel and drawn with the map's own buttons:
 
 <p align="center"><img src="assets/mp9-toolbar-preview.png" width="70%" alt="Markup toolbar"></p>
 
@@ -107,6 +107,9 @@ Tile saves now go to a temp file and are then moved into place, so the export ne
 - Markup lives in memory only: **Esc** (or the X, or closing the map) closes markup mode and forgets it unless you saved it. The first Esc closes markup; the next one closes the map.
 
 Also fixed: the coordinates at the bottom of the map (and new waypoints from a double click) were one block off towards +X/+Z; they now show the block under the cursor. Waypoints are reloaded when you change dimension, so a death or temp waypoint can no longer write the old dimension's list into the new dimension's file. Middle drag pans the map.
+
+## 1.5.4-mp10
+The dimension toggle button moved from the top-left row (next to Markup) to the left end of the top-right row, next to the map mode, entities, grid, slime and waypoint buttons. D still toggles it.
 
 ## Building this fork
 Built with JDK 21. From the repo root:
