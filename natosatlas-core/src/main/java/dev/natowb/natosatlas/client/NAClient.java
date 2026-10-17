@@ -68,6 +68,7 @@ public class NAClient implements NAClientSession {
     public void tick() {
         NAWorldInfo worldInfo = ClientWorldAccess.get().getWorldInfo();
         boolean worldExists = worldInfo != null;
+        if (worldExists) dev.natowb.natosatlas.client.io.WorldMapExport.drainMessages(); // mp7
 
         if (!worldExists && inWorld) {
             inWorld = false;

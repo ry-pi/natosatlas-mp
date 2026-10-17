@@ -103,6 +103,15 @@ public class NARegionPixelCache {
         dirtySet.clear();
     }
 
+    /** mp7: like clear(), but also frees the GL textures (call on the render thread). */
+    public void clearAndDeleteTextures() {
+        for (NARegionPixelData[] arr : regions.values()) {
+            if (arr == null) continue;
+            for (NARegionPixelData r : arr) if (r != null) r.deleteTexture();
+        }
+        clear();
+    }
+
     public int getRegionCount() {
         return regions.size();
     }

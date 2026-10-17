@@ -3,7 +3,6 @@ package dev.natowb.natosatlas.client.ui.screens.map;
 import dev.natowb.natosatlas.client.MapUpdater;
 import dev.natowb.natosatlas.client.NAClient;
 import dev.natowb.natosatlas.client.platform.ClientWorldAccess;
-import dev.natowb.natosatlas.client.io.MapExporter;
 import dev.natowb.natosatlas.client.io.MapSaver;
 import dev.natowb.natosatlas.client.ui.screens.waypoint.Waypoint;
 import dev.natowb.natosatlas.core.NAConstants;
@@ -289,6 +288,8 @@ public class MapScreen extends UIScreen {
         renderMouseBlockInfo(ctx);
         String importStatus = dev.natowb.natosatlas.client.RegionImporter.get().getStatus();
         if (!importStatus.isEmpty()) painter.drawCenteredString(importStatus, width / 2, 4, 0xFF55FF55);
+        String imageStatus = dev.natowb.natosatlas.client.io.WorldMapExport.getStatus();
+        if (!imageStatus.isEmpty()) painter.drawCenteredString(imageStatus, width / 2, importStatus.isEmpty() ? 4 : 38, 0xFF55FF55);
         super.render(mouseX, mouseY, delta, scaleInfo);
     }
 
@@ -444,7 +445,9 @@ public class MapScreen extends UIScreen {
         }
 
         if (keyCode == Keyboard.KEY_P) {
-            MapExporter.exportMapLayer(activeLayer);
+            // mp7: P = save map image (full), Shift+P = small, to the screenshots folder (was a blocking stitch)
+            boolean small = Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
+            dev.natowb.natosatlas.client.io.WorldMapExport.start(small, activeLayer);
         }
     }
 

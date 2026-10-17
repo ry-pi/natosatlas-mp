@@ -98,6 +98,10 @@
         public void tick() {
             super.tick();
             applySlimeSeed(); // live: the field's text is the override (blank = server seed); saved only when it changes
+            if (deleteButton != null && deleteArmedUntil != 0 && System.currentTimeMillis() >= deleteArmedUntil) {
+                deleteArmedUntil = 0;
+                deleteButton.label = DELETE_LABEL;
+            }
         }
 
         @Override
@@ -128,6 +132,7 @@
             sliders.removeIf(s -> s.id >= 300);
             textFields.clear();
             slimeSeedField = null;
+            deleteButton = null;
 
             int listTop = headerY + 50;
             UILayout layout = new UIVerticalLayout(width / 2, listTop, 5);
@@ -147,7 +152,10 @@
             }
         }
 
-        private void buildGeneralSettings(UILayout layout) {
+        private void buildGeneralSettings(UILayout ignored) {
+            // mp7: two columns (like the Minimap tab) so the map image / delete buttons fit without pushing
+            // the import folder text at the bottom
+            UILayout layout = new UIVerticalLayout(width / 2 - 80, headerY + 50, 5);
             UIElementOptionButton debugButton =
                     new UIElementOptionButton(SettingsOption.DEBUG_INFO, layout, 150, 20);
             debugButton.setHandler(btn -> debugButton.cycle());
@@ -168,7 +176,38 @@
                 rebuildContent();
             });
             addButton(importButton);
+
+            UILayout right = new UIVerticalLayout(width / 2 + 80, headerY + 50, 5);
+            UIElementButton saveFull = new UIElementButton(313, right, 150, 20, "Save map image (full)");
+            saveFull.setHandler(btn -> dev.natowb.natosatlas.client.io.WorldMapExport.start(false,
+                    dev.natowb.natosatlas.client.io.WorldMapExport.currentLayer()));
+            addButton(saveFull);
+
+            UIElementButton saveSmall = new UIElementButton(314, right, 150, 20, "Save map image (small)");
+            saveSmall.setHandler(btn -> dev.natowb.natosatlas.client.io.WorldMapExport.start(true,
+                    dev.natowb.natosatlas.client.io.WorldMapExport.currentLayer()));
+            addButton(saveSmall);
+
+            deleteButton = new UIElementButton(315, right, 150, 20, DELETE_LABEL);
+            deleteArmedUntil = 0;
+            deleteButton.setHandler(btn -> {
+                long now = System.currentTimeMillis();
+                if (now < deleteArmedUntil) {
+                    deleteArmedUntil = 0;
+                    btn.label = DELETE_LABEL;
+                    dev.natowb.natosatlas.client.MapDataReset.deleteCurrentWorld();
+                } else {
+                    deleteArmedUntil = now + 4000;
+                    btn.label = "\u00a7cClick again to confirm";
+                }
+            });
+            addButton(deleteButton);
         }
+
+        // mp7: two-click confirm for "Delete all map data"
+        private static final String DELETE_LABEL = "Delete all map data";
+        private UIElementButton deleteButton;
+        private long deleteArmedUntil = 0;
 
         private void buildAtlasSettings(UILayout layout) {
             UIElementSlider zoomSlider =
@@ -275,6 +314,13 @@
                 p.drawCenteredString("Copy the server's region/*.mcr files into:", width / 2, height - 46, UITheme.TITLE_TEXT);
                 if (dir != null) p.drawCenteredString(dir.getAbsolutePath(), width / 2, height - 36, 0xFFAAAAAA);
                 if (!imp.getStatus().isEmpty()) p.drawCenteredString(imp.getStatus(), width / 2, height - 24, 0xFF55FF55);
+            }
+
+            if (activeTab == Tab.GENERAL) {
+                String imageStatus = dev.natowb.natosatlas.client.io.WorldMapExport.getStatus();
+                if (!imageStatus.isEmpty()) p.drawCenteredString(imageStatus, width / 2, height - 12, 0xFF55FF55);
+                else if (ClientWorldAccess.get().getWorldInfo() != null)
+                    p.drawCenteredString("Map images save to .minecraft/screenshots", width / 2, height - 12, 0xFFAAAAAA);
             }
 
             if (activeTab == Tab.ATLAS && slimeSeedField != null) {

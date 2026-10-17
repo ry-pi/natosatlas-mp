@@ -64,6 +64,17 @@ public class MapSaver {
         pending.clear();
     }
 
+    /** mp7: stop the worker and throw away every queued save (stop() alone leaves queued tasks behind). */
+    public synchronized void stopAndDiscard() {
+        stop();
+        queue.clear();
+        pending.clear();
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
     public void saveNextBatch() {
         if (!running) return;
 

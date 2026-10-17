@@ -80,4 +80,11 @@ public class STClientPlatform extends ClientPlatform {
             }
         });
     }
+
+    /** mp7: chat line for the map image / delete messages. */
+    @Override
+    public void chat(String message) {
+        Minecraft mc = (Minecraft) FabricLoader.getInstance().getGameInstance();
+        if (mc != null && mc.inGameHud != null) mc.inGameHud.addChatMessage("\u00a7a[Natos Atlas]\u00a7r " + message);
+    }
 }

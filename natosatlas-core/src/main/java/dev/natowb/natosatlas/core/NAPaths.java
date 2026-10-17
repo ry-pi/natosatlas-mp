@@ -79,6 +79,12 @@ public final class NAPaths {
         return worldSavePath;
     }
 
+    /** mp7: the folder holding every DIMn/layer_n tile folder of the current world (not created). */
+    public static Path getWorldMapRootPath(boolean useSaveFolder) {
+        Path base = useSaveFolder ? (worldSavePath == null ? null : worldSavePath.resolve("natosatlas")) : worldDataPath;
+        return base == null ? null : base.resolve("regions");
+    }
+
     public static Path getWorldMapStoragePath(int layerId, int dim, boolean useSaveFolder) {
         Path basePath;
         if (useSaveFolder) {

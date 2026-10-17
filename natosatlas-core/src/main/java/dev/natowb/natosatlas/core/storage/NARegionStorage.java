@@ -91,9 +91,26 @@ public class NARegionStorage {
                     BLOCKS_PER_CANVAS_REGION
             );
 
-            try (ImageOutputStream out = ImageIO.createImageOutputStream(file)) {
+            // mp7: write to a temp file and swap it in, so a reader (map image export) never sees half a PNG
+            File tmp = new File(file.getPath() + ".tmp");
+            if (tmp.exists()) tmp.delete();
+            try (ImageOutputStream out = ImageIO.createImageOutputStream(tmp)) {
                 pngWriter.setOutput(out);
                 pngWriter.write(null, new IIOImage(reusableImage, null, null), pngParams);
+            }
+            try {
+                java.nio.file.Files.move(tmp.toPath(), file.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException atomicFailed) {
+                try {
+                    java.nio.file.Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException moveFailed) {
+                    tmp.delete();
+                    try (ImageOutputStream out = ImageIO.createImageOutputStream(file)) {
+                        pngWriter.setOutput(out);
+                        pngWriter.write(null, new IIOImage(reusableImage, null, null), pngParams);
+                    }
+                }
             }
         } catch (Exception e) {
             LogUtil.error("Failed to save region {} to {}", regionCoord, file);

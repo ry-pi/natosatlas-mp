@@ -77,6 +77,16 @@ Chunks your client currently has loaded are left to live scanning. Corrupt chunk
 ## 1.5.4-mp6
 Options > World map > "Slime seed (blank = server seed)": a per-server manual world seed for the slime chunk overlay (number or text seed). Also fixes the slime chunk formula to match b1.7.3's own check exactly (the original was wrong far out on the X axis).
 
+## 1.5.4-mp7: save the whole map as a PNG, delete map data
+Options > General has three new buttons in the right-hand column:
+- **Save map image (full)**: every explored part of the current world/server and dimension, in the map mode you're viewing (Day, Night or Cave; Auto picks the same one the map shows), 1 pixel per block. Saved to `.minecraft/screenshots/worldmap-yyyy-MM-dd_HH.mm.ss.png`.
+- **Save map image (small)**: the same at 1 pixel per 4x4 blocks (box-averaged, not nearest), saved as `worldmap-<timestamp>-small.png`.
+- **Delete all map data**: click twice within 4 seconds. Deletes every stored map tile (all dimensions and layers) for the current world/server only, clears the tiles in memory, and the map starts filling in again as you move. Waypoints, the slime seed, the `import/` folder and settings are kept.
+
+On the map screen, **P** saves the full image and **Shift+P** saves the small one (P used to write a blocking `exported_map_layer_N.png` into the server folder).
+Images are cropped to the explored area. Unexplored parts are transparent. Each image records its top-left world block in its PNG comment. Saving runs on a background thread and writes the PNG in strips, so memory stays low. Images over 32768 px on a side are refused with a chat message suggesting the small version. Existing files are never overwritten (`_1`, `_2`, ... is added). Progress and results show in chat and on the options/map screens.
+Tile saves now go to a temp file and are then moved into place, so the export never reads half-written tiles.
+
 ## Building this fork
 Built with JDK 21. From the repo root:
 ```bash
