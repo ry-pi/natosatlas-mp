@@ -129,24 +129,24 @@ public class MapScreen extends UIScreen {
 
         UIElementIconButton closeButton = new UIElementIconButton(101, leftLayout, 20, 20, ICON_CROSS);
         closeButton.setHandler(btn -> NAClient.get().getPlatform().screen.openNacScreen(parent));
-        closeButton.setTooltip("Close");
+        closeButton.setTooltip(MapTooltips.CLOSE);
         addButton(closeButton);
 
         UIElementIconButton optionsButton = new UIElementIconButton(102, leftLayout, 20, 20, ICON_COG);
         optionsButton.setHandler(btn -> NAClient.get().getPlatform().screen.openNacScreen(new SettingsScreen(this)));
-        optionsButton.setTooltip("Options");
+        optionsButton.setTooltip(MapTooltips.OPTIONS);
 
         addButton(optionsButton);
 
         UIElementIconButton helpButton = new UIElementIconButton(106, leftLayout, 20, 20, ICON_HELP);
         helpButton.setHandler(btn -> NAClient.get().getPlatform().screen.openNacScreen(new HelpScreen(this)));
-        helpButton.setTooltip("Help");
+        helpButton.setTooltip(MapTooltips.HELP);
         addButton(helpButton);
 
         // mp9: markup mode toggle
         int[] p = nextPos(leftLayout);
         UIElementToolButton markupButton = new UIElementToolButton(108, p[0], p[1], 20, 20, ICON_MARKUP, () -> markupMode);
-        markupButton.setTooltip(markupMode ? "Markup: on (Esc = close and forget the markup)" : "Markup: draw on the map [B]");
+        markupButton.setTooltip(MapTooltips.markup(markupMode));
         markupButton.setHandler(btn -> {
             if (markupMode) exitMarkup();
             else enterMarkup();
@@ -161,7 +161,7 @@ public class MapScreen extends UIScreen {
 
         UIElementIconButton waypointsButton = new UIElementIconButton(103, top.get(MapTopBar.Slot.WAYPOINTS)[0], top.get(MapTopBar.Slot.WAYPOINTS)[1], 20, 20, ICON_WAYPOINTS);
         waypointsButton.setHandler(btn -> NAClient.get().getPlatform().screen.openNacScreen(new WaypointListScreen(this)));
-        waypointsButton.setTooltip("Waypoints");
+        waypointsButton.setTooltip(MapTooltips.WAYPOINTS);
         addButton(waypointsButton);
 
         UIElementIconButton slimeChunksButton = new UIElementIconButton(104, top.get(MapTopBar.Slot.SLIME)[0], top.get(MapTopBar.Slot.SLIME)[1], 20, 20, ICON_SLIME_ENABLED);
@@ -177,11 +177,11 @@ public class MapScreen extends UIScreen {
             }
             Settings.save();
         });
-        slimeChunksButton.setTooltip("Toggle Slime Chunks (" + dev.natowb.natosatlas.client.SlimeSeed.describe() + ")");
+        slimeChunksButton.setTooltip(MapTooltips.SLIME); // mp12: never the seed
         addButton(slimeChunksButton);
 
         UIElementIconButton gridButton = new UIElementIconButton(107, top.get(MapTopBar.Slot.GRID)[0], top.get(MapTopBar.Slot.GRID)[1], 20, 20, ICON_GRID_ENABLED);
-        gridButton.setTooltip("Toggle Grid");
+        gridButton.setTooltip(MapTooltips.GRID);
 
         if (!Settings.mapGrid) {
             gridButton.setIcon(ICON_GRID_DISABLED);
@@ -201,7 +201,7 @@ public class MapScreen extends UIScreen {
 
         UIElementIconButton entityButton = new UIElementIconButton(105, top.get(MapTopBar.Slot.ENTITIES)[0], top.get(MapTopBar.Slot.ENTITIES)[1], 20, 20, 5);
 
-        entityButton.setTooltip(String.format("Entities: %s", Settings.entityDisplayMode.name()));
+        entityButton.setTooltip(MapTooltips.entities(Settings.entityDisplayMode.name()));
         switch (Settings.entityDisplayMode) {
             case Player:
                 entityButton.setIcon(ICON_ENTITY_PLAYER);
@@ -216,7 +216,7 @@ public class MapScreen extends UIScreen {
 
         entityButton.setHandler(btn -> {
             SettingsOption.ENTITY_DISPLAY.cycle();
-            entityButton.setTooltip(String.format("Entities: %s", Settings.entityDisplayMode.name()));
+            entityButton.setTooltip(MapTooltips.entities(Settings.entityDisplayMode.name()));
             switch (Settings.entityDisplayMode) {
                 case Player:
                     entityButton.setIcon(ICON_ENTITY_PLAYER);
@@ -252,10 +252,9 @@ public class MapScreen extends UIScreen {
         addButton(modeButton);
 
         // mp10: dimension toggle, at the left end of the top-right map buttons (was next to markup in mp9)
-        int nextDim = MapDimensions.next(viewDim, playerDim);
         UIElementIconButton dimButton = new UIElementIconButton(109, top.get(MapTopBar.Slot.DIMENSION)[0], top.get(MapTopBar.Slot.DIMENSION)[1], 20, 20,
                 viewDim == MapDimensions.NETHER ? ICON_DIM_NETHER : ICON_DIM_OVERWORLD);
-        dimButton.setTooltip("Showing: " + MapDimensions.name(viewDim) + " (click for " + MapDimensions.name(nextDim) + ") [D]");
+        dimButton.setTooltip(MapTooltips.dimension(viewDim));
         dimButton.setHandler(btn -> setViewDim(MapDimensions.next(viewDim, playerDim), true));
         addButton(dimButton);
 
@@ -396,6 +395,10 @@ public class MapScreen extends UIScreen {
         }
         if (markupMode) renderToolbarPanel(mouseX, mouseY);
         super.render(mouseX, mouseY, delta, scaleInfo);
+        if (markupMode && toolbar != null) { // mp12: colour names on the palette
+            int sw = toolbar.swatchAt(mouseX, mouseY);
+            if (sw >= 0) dev.natowb.natosatlas.client.ui.elements.UIElement.drawTooltipBox(MapTooltips.colour(sw), mouseX, mouseY, width, height);
+        }
     }
 
     public void renderMouseBlockHighlight(MapContext ctx) {
@@ -718,7 +721,8 @@ public class MapScreen extends UIScreen {
                 case TOOL_ELLIPSE:
                 case TOOL_LINE:
                 case TOOL_PENCIL:
-                case TOOL_ERASER: {
+                case TOOL_ERASER_BLOCK:
+                case TOOL_ERASER_SHAPE: {
                     final MarkupTool t = MarkupTool.values()[c.item.ordinal() - MarkupToolbar.Item.TOOL_PAN.ordinal()];
                     b = new UIElementToolButton(300 + t.ordinal(), c.x, c.y, c.w, c.h, t.icon, () -> tool == t);
                     b.setTooltip(t.tooltip());
@@ -727,7 +731,7 @@ public class MapScreen extends UIScreen {
                 }
                 case FILL:
                     b = new UIElementToolButton(310, c.x, c.y, c.w, c.h, markupFill ? ICON_FILL_ON : ICON_FILL_OFF, () -> markupFill);
-                    b.setTooltip(markupFill ? "Filled shapes (click for outline) [F]" : "Outline shapes (click for filled) [F]");
+                    b.setTooltip(MapTooltips.fill(markupFill));
                     b.setHandler(btn -> {
                         markupFill = !markupFill;
                         buildButtons();
@@ -735,7 +739,7 @@ public class MapScreen extends UIScreen {
                     break;
                 case WIDTH:
                     b = new UIElementToolButton(311, c.x, c.y, c.w, c.h, MarkupToolbar.widthIcon(markupWidth), null);
-                    b.setTooltip("Thickness: " + markupWidth + (markupWidth == 1 ? " block" : " blocks") + " (click to change) [ and ]");
+                    b.setTooltip(MapTooltips.thickness(markupWidth));
                     b.setHandler(btn -> {
                         markupWidth = MarkupToolbar.nextWidth(markupWidth);
                         buildButtons();
@@ -743,12 +747,12 @@ public class MapScreen extends UIScreen {
                     break;
                 case UNDO:
                     b = new UIElementToolButton(312, c.x, c.y, c.w, c.h, ICON_UNDO, null);
-                    b.setTooltip("Undo [Ctrl+Z]");
+                    b.setTooltip(MapTooltips.UNDO);
                     b.setHandler(btn -> markup.undo());
                     break;
                 case CLEAR:
                     b = new UIElementToolButton(313, c.x, c.y, c.w, c.h, ICON_CLEAR, null);
-                    b.setTooltip("Clear all (Ctrl+Z brings it back)");
+                    b.setTooltip(MapTooltips.CLEAR);
                     b.setHandler(btn -> {
                         cancelDrawing();
                         markup.clear(viewDim);
@@ -756,12 +760,12 @@ public class MapScreen extends UIScreen {
                     break;
                 case SAVE:
                     b = new UIElementToolButton(314, c.x, c.y, c.w, c.h, ICON_SAVE, null);
-                    b.setTooltip("Save map + markup as PNG to screenshots [Ctrl+S]");
+                    b.setTooltip(MapTooltips.SAVE);
                     b.setHandler(btn -> saveMarkup());
                     break;
                 default:
                     b = new UIElementToolButton(315, c.x, c.y, c.w, c.h, ICON_CROSS, null);
-                    b.setTooltip("Close markup and forget it [Esc]");
+                    b.setTooltip(MapTooltips.CLOSE_MARKUP);
                     b.setHandler(btn -> exitMarkup());
                     break;
             }
@@ -769,7 +773,7 @@ public class MapScreen extends UIScreen {
         }
     }
 
-    /** Panel, title, colour bar and palette (the buttons draw themselves in super.render). */
+    /** Panel and palette (the buttons draw themselves in super.render). */
     private void renderToolbarPanel(int mouseX, int mouseY) {
         MarkupToolbar t = toolbar;
         if (t == null) return;
@@ -777,16 +781,14 @@ public class MapScreen extends UIScreen {
         painter.drawRect(t.panelX, t.panelY, t.panelX + t.panelW, t.panelY + t.panelH, 0xE0100010);
         painter.drawRect(t.panelX, t.panelY, t.panelX + t.panelW, t.panelY + 1, 0x805000FF);
         painter.drawRect(t.panelX, t.panelY + t.panelH - 1, t.panelX + t.panelW, t.panelY + t.panelH, 0x805000FF);
-        painter.drawStringWithShadow("Markup", t.panelX + MarkupToolbar.PAD, t.titleY, 0xFFFFFFFF);
-        // current colour
-        painter.drawRect(t.barX, t.barY, t.barX + t.barW, t.barY + MarkupToolbar.BAR, 0xFF000000);
-        painter.drawRect(t.barX + 1, t.barY + 1, t.barX + t.barW - 1, t.barY + MarkupToolbar.BAR - 1, 0xFF000000 | markupColor);
         for (int i = 0; i < MarkupToolbar.PALETTE.length; i++) {
             int[] s = t.swatches[i];
             int col = MarkupToolbar.PALETTE[i];
             boolean sel = col == markupColor;
             boolean hov = mouseX >= s[0] && mouseX < s[0] + MarkupToolbar.SWATCH && mouseY >= s[1] && mouseY < s[1] + MarkupToolbar.SWATCH;
-            painter.drawRect(s[0], s[1], s[0] + MarkupToolbar.SWATCH, s[1] + MarkupToolbar.SWATCH, sel ? 0xFFFFFFFF : hov ? 0xFFFFFFA0 : 0xFF000000);
+            // mp12: the chosen colour gets a white frame around a black ring (the colour bar is gone)
+            if (sel) painter.drawRect(s[0] - 1, s[1] - 1, s[0] + MarkupToolbar.SWATCH + 1, s[1] + MarkupToolbar.SWATCH + 1, 0xFFFFFFFF);
+            painter.drawRect(s[0], s[1], s[0] + MarkupToolbar.SWATCH, s[1] + MarkupToolbar.SWATCH, hov && !sel ? 0xFFFFFFA0 : 0xFF000000);
             painter.drawRect(s[0] + 1, s[1] + 1, s[0] + MarkupToolbar.SWATCH - 1, s[1] + MarkupToolbar.SWATCH - 1, 0xFF000000 | col);
         }
         for (UIElementButton b : buttons) {
@@ -818,7 +820,8 @@ public class MapScreen extends UIScreen {
             case PAN:
                 viewport.dragStart(x, y);
                 return true;
-            case ERASER:
+            case ERASER_BLOCK:
+            case ERASER_SHAPE:
                 erasing = true;
                 lastErase = null;
                 markup.beginErase();
@@ -908,15 +911,17 @@ public class MapScreen extends UIScreen {
         return true;
     }
 
-    /** mp11: erases the blocks under the eraser (brush = the thickness), joined to the previous position. */
+    /** Block eraser (mp11): removes the blocks under it (brush = thickness). Shape eraser (mp12): removes whole shapes it touches. */
     private void eraseAt(int x, int y) {
         MapContext ctx = viewport.getContext();
         int[] b = MapProjection.screenToBlock(ctx, x, y);
         java.util.Set<Long> cells = new java.util.HashSet<>();
-        if (lastErase == null) MarkupRaster.brush(b[0], b[1], markupWidth, cells);
-        else MarkupRaster.line(lastErase[0], lastErase[1], b[0], b[1], markupWidth, cells);
+        int brush = tool == MarkupTool.ERASER_SHAPE ? MarkupGeometry.shapeEraserBrush(MapProjection.pixelsPerBlock(ctx)) : markupWidth;
+        if (lastErase == null) MarkupRaster.brush(b[0], b[1], brush, cells);
+        else MarkupRaster.line(lastErase[0], lastErase[1], b[0], b[1], brush, cells);
         lastErase = b;
-        markup.erase(viewDim, cells);
+        if (tool == MarkupTool.ERASER_SHAPE) markup.eraseShapes(viewDim, cells);
+        else markup.erase(viewDim, cells);
     }
 
     /** Markup mode keys; true = handled (not passed on to the map). */

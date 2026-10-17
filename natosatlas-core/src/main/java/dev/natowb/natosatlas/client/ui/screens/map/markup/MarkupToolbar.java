@@ -18,11 +18,18 @@ public final class MarkupToolbar {
     public static final int DEFAULT_COLOR = 0xFF3030;
     public static final int[] WIDTHS = {1, 2, 3, 5};
 
-    public static final int CELL = 20, GAP = 2, PAD = 3, TITLE = 10, SECTION = 3, SWATCH = 9, SWATCH_GAP = 2, BAR = 10;
+    public static final int CELL = 20, GAP = 2, PAD = 3, SECTION = 3, SWATCH = 9, SWATCH_GAP = 2;
+
+    /** mp12: palette colour names (swatch tooltips). */
+    public static final String[] PALETTE_NAMES = {
+            "White", "Light grey", "Dark grey", "Black",
+            "Red", "Orange", "Yellow", "Lime",
+            "Green", "Cyan", "Light blue", "Blue",
+            "Purple", "Magenta", "Pink", "Brown"};
 
     /** Things in the toolbar, in order. */
     public enum Item {
-        TOOL_PAN, TOOL_RECT, TOOL_ELLIPSE, TOOL_LINE, TOOL_PENCIL, TOOL_ERASER,
+        TOOL_PAN, TOOL_RECT, TOOL_ELLIPSE, TOOL_LINE, TOOL_PENCIL, TOOL_ERASER_BLOCK, TOOL_ERASER_SHAPE,
         FILL, WIDTH, UNDO, CLEAR, SAVE, EXIT
     }
 
@@ -40,8 +47,6 @@ public final class MarkupToolbar {
     }
 
     public int panelX, panelY, panelW, panelH, cols;
-    public int titleY;
-    public int barX, barY, barW;
     public final List<Cell> cells = new ArrayList<>();
     public final int[][] swatches = new int[PALETTE.length][]; // {x, y} per palette entry
 
@@ -63,16 +68,12 @@ public final class MarkupToolbar {
         panelW = inner + PAD * 2;
         int ix = x + PAD;
         int cy = y + PAD;
-        titleY = cy + 1;
-        cy += TITLE;
-        Item[] tools = {Item.TOOL_PAN, Item.TOOL_RECT, Item.TOOL_ELLIPSE, Item.TOOL_LINE, Item.TOOL_PENCIL, Item.TOOL_ERASER};
+        // mp12: 7 tools; in the 2-wide layout Pan spans the first row, so both erasers share a row.
+        // (The "Markup" title and the colour bar went to make room: the chosen swatch is framed instead.)
+        Item[] tools = {Item.TOOL_PAN, Item.TOOL_RECT, Item.TOOL_ELLIPSE, Item.TOOL_LINE, Item.TOOL_PENCIL, Item.TOOL_ERASER_BLOCK, Item.TOOL_ERASER_SHAPE};
         Item[] opts = {Item.FILL, Item.WIDTH, Item.UNDO, Item.CLEAR, Item.SAVE, Item.EXIT};
-        cy = grid(tools, ix, cy) + SECTION;
-        cy = grid(opts, ix, cy) + SECTION;
-        barX = ix;
-        barY = cy;
-        barW = inner;
-        cy += BAR + 3;
+        cy = grid(tools, ix, cy, inner) + SECTION;
+        cy = grid(opts, ix, cy, inner) + SECTION;
         int perRow = cols * 2; // two 9 px swatches per 20 px cell column: 2*9 + 2 = 20
         for (int i = 0; i < PALETTE.length; i++) {
             int r = i / perRow, c = i % perRow;
@@ -83,12 +84,18 @@ public final class MarkupToolbar {
         panelH = cy + PAD - y;
     }
 
-    private int grid(Item[] items, int ix, int cy) {
-        for (int i = 0; i < items.length; i++) {
-            int r = i / cols, c = i % cols;
+    private int grid(Item[] items, int ix, int cy, int inner) {
+        int start = 0, slot = 0;
+        if (cols == 2 && items.length % 2 == 1) { // odd count, 2 wide: the first item fills its row
+            cells.add(new Cell(items[0], ix, cy, inner, CELL));
+            start = 1;
+            slot = 2;
+        }
+        for (int i = start; i < items.length; i++, slot++) {
+            int r = slot / cols, c = slot % cols;
             cells.add(new Cell(items[i], ix + c * (CELL + GAP), cy + r * (CELL + GAP), CELL, CELL));
         }
-        int rows = (items.length + cols - 1) / cols;
+        int rows = (slot + cols - 1) / cols;
         return cy + rows * CELL + (rows - 1) * GAP;
     }
 

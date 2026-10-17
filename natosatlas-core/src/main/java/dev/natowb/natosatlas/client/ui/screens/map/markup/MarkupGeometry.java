@@ -113,6 +113,15 @@ public final class MarkupGeometry {
         return false;
     }
 
+    /**
+     * mp12 shape eraser brush size in blocks for the map zoom: about 3 GUI px around the cursor (like the mp9 eraser),
+     * at least the block under it. Odd, so it's centred.
+     */
+    public static int shapeEraserBrush(double pixelsPerBlock) {
+        int r = (int) Math.max(0, Math.ceil(3.0 / Math.max(pixelsPerBlock, 1e-3) - 0.5));
+        return 2 * Math.min(r, 15) + 1;
+    }
+
     /** Union bounds {minX, minZ, maxX, maxZ} of shapes, or null if there are none. */
     public static double[] bounds(List<MarkupShape> shapes) {
         double[] b = null;

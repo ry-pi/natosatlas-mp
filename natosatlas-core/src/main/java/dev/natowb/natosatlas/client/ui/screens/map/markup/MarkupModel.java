@@ -85,13 +85,31 @@ public final class MarkupModel {
         return changed;
     }
 
+    /** mp12 shape eraser: removes every shape of the dimension that colours one of these cells (same undo stroke). */
+    public boolean eraseShapes(int dim, java.util.Set<Long> cells) {
+        if (strokeErased == null) beginErase();
+        boolean changed = false;
+        for (int i = shapes.size() - 1; i >= 0; i--) {
+            MarkupShape s = shapes.get(i);
+            if (s.dim != dim) continue;
+            BlockCells c = s.cells();
+            boolean hit = false;
+            for (long k : cells) if (c.contains(BlockCells.keyX(k), BlockCells.keyZ(k))) { hit = true; break; }
+            if (!hit) continue;
+            strokeRemoved.add(new Object[]{i, s});
+            shapes.remove(i);
+            changed = true;
+        }
+        return changed;
+    }
+
     public void endErase() {
         if (strokeErased == null) return;
         final java.util.Map<MarkupShape, java.util.Set<Long>> er = strokeErased;
         final List<Object[]> rm = strokeRemoved;
         strokeErased = null;
         strokeRemoved = null;
-        if (er.isEmpty()) return;
+        if (er.isEmpty() && rm.isEmpty()) return;
         push(list -> {
             for (int i = rm.size() - 1; i >= 0; i--) list.add(Math.min((Integer) rm.get(i)[0], list.size()), (MarkupShape) rm.get(i)[1]);
             for (java.util.Map.Entry<MarkupShape, java.util.Set<Long>> e : er.entrySet()) e.getKey().unerase(e.getValue());

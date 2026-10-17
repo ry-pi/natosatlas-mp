@@ -115,12 +115,11 @@ public final class SlimeSeed {
         return custom != null ? custom : getWorldSeed();
     }
 
-    /** "custom seed 123" / "server seed 123" / "world seed 123" */
-    public static String describe() {
-        if (isCustom()) return "custom seed " + getEffectiveSeed();
+    /** mp12: where the seed comes from, without the number (tooltips/HUD must never show the seed). */
+    public static String source() {
+        if (isCustom()) return "custom seed";
         ClientWorldAccess access = ClientWorldAccess.get();
         NAWorldInfo info = access == null ? null : access.getWorldInfo();
-        boolean mp = info != null && info.isMultiplayer();
-        return (mp ? "server seed " : "world seed ") + getWorldSeed();
+        return info != null && info.isMultiplayer() ? "server seed" : "world seed";
     }
 }

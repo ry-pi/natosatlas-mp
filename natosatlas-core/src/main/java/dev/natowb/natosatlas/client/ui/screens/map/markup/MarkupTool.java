@@ -1,29 +1,38 @@
 package dev.natowb.natosatlas.client.ui.screens.map.markup;
 
+import dev.natowb.natosatlas.client.ui.screens.map.MapTooltips;
 import org.lwjgl.input.Keyboard;
 
 import static dev.natowb.natosatlas.client.texture.TextureProvider.*;
 
-/** mp9: markup toolbar tools (number keys 1-6 while markup mode is on). */
+/** Markup toolbar tools (number keys 1-7 while markup mode is on). */
 public enum MarkupTool {
-    PAN("Pan (move the map)", ICON_TOOL_PAN, Keyboard.KEY_1),
-    RECT("Rectangle (shows corner coords, Shift = square)", ICON_TOOL_RECT, Keyboard.KEY_2),
-    ELLIPSE("Ellipse (Shift = circle)", ICON_TOOL_ELLIPSE, Keyboard.KEY_3),
-    LINE("Line (Shift = 45 degree steps)", ICON_TOOL_LINE, Keyboard.KEY_4),
-    PENCIL("Pencil", ICON_TOOL_PENCIL, Keyboard.KEY_5),
-    ERASER("Eraser (click or drag over a shape)", ICON_TOOL_ERASER, Keyboard.KEY_6);
+    PAN("Pan", null, ICON_TOOL_PAN, Keyboard.KEY_1),
+    RECT("Rectangle", "Shift = square", ICON_TOOL_RECT, Keyboard.KEY_2),
+    ELLIPSE("Ellipse", "Shift = circle", ICON_TOOL_ELLIPSE, Keyboard.KEY_3),
+    LINE("Line", "Shift = 45 degrees", ICON_TOOL_LINE, Keyboard.KEY_4),
+    PENCIL("Pencil", null, ICON_TOOL_PENCIL, Keyboard.KEY_5),
+    ERASER_BLOCK("Block eraser", null, ICON_TOOL_ERASER_BLOCK, Keyboard.KEY_6), // mp11 eraser: removes blocks
+    ERASER_SHAPE("Shape eraser", null, ICON_TOOL_ERASER_SHAPE, Keyboard.KEY_7); // mp9 eraser: removes whole shapes
 
     public final String label;
+    public final String keys;
     public final int icon;
     public final int key;
 
-    MarkupTool(String label, int icon, int key) {
+    MarkupTool(String label, String keys, int icon, int key) {
         this.label = label;
+        this.keys = keys;
         this.icon = icon;
         this.key = key;
     }
 
+    public boolean isEraser() {
+        return this == ERASER_BLOCK || this == ERASER_SHAPE;
+    }
+
+    /** "Name (modifier keys) [hotkey]". */
     public String tooltip() {
-        return label + " [" + (ordinal() + 1) + "]";
+        return MapTooltips.format(label, keys, String.valueOf(ordinal() + 1));
     }
 }

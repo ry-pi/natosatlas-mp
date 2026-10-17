@@ -45,6 +45,31 @@ public final class RegionImporter {
         return NAPaths.ensurePathExists(p).toFile();
     }
 
+    /**
+     * mp12: a folder as shown on screen, from the game folder down: {@code \minecraft\natosatlas\servers\...\import}
+     * (the game folder's own name, e.g. "minecraft" or ".minecraft", with the OS separator). Full path if the folder
+     * isn't inside the game folder or anything fails.
+     */
+    public static String displayPath(File dir, Path gameDir) {
+        return displayPath(dir, gameDir, File.separator);
+    }
+
+    public static String displayPath(File dir, Path gameDir, String sep) {
+        try {
+            Path abs = dir.toPath().toAbsolutePath().normalize();
+            Path game = gameDir.toAbsolutePath().normalize();
+            if (!abs.startsWith(game) || game.getFileName() == null) return dir.getAbsolutePath();
+            StringBuilder b = new StringBuilder(sep).append(game.getFileName());
+            for (Path part : game.relativize(abs)) {
+                if (part.toString().isEmpty()) continue;
+                b.append(sep).append(part);
+            }
+            return b.toString();
+        } catch (RuntimeException e) {
+            return dir.getAbsolutePath();
+        }
+    }
+
     public static void ensureFolders() {
         getImportDir(0);
         getImportDir(-1);

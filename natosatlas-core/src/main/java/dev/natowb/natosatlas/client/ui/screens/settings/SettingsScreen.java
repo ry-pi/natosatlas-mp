@@ -325,7 +325,7 @@
                 int dim = ClientWorldAccess.get().getWorldInfo().getDimensionId();
                 java.io.File dir = dev.natowb.natosatlas.client.RegionImporter.getImportDir(dim);
                 p.drawCenteredString("Copy the server's region/*.mcr files into:", width / 2, height - 46, UITheme.TITLE_TEXT);
-                if (dir != null) p.drawCenteredString(dir.getAbsolutePath(), width / 2, height - 36, 0xFFAAAAAA);
+                if (dir != null) p.drawCenteredString(dev.natowb.natosatlas.client.RegionImporter.displayPath(dir, dev.natowb.natosatlas.core.NAPaths.getMinecraftPath()), width / 2, height - 36, 0xFFAAAAAA);
                 String folderStatus = dev.natowb.natosatlas.client.FolderOpener.getStatus();
                 if (!folderStatus.isEmpty()) p.drawCenteredString(folderStatus, width / 2, height - 24, 0xFF55FF55);
                 else if (!imp.getStatus().isEmpty()) p.drawCenteredString(imp.getStatus(), width / 2, height - 24, 0xFF55FF55);
@@ -340,9 +340,9 @@
 
             if (activeTab == Tab.ATLAS && slimeSeedField != null) {
                 p.drawCenteredString("Slime seed (blank = server seed)", width / 2, slimeSeedField.y - 11, UITheme.TITLE_TEXT);
-                String using = "Slimes using " + dev.natowb.natosatlas.client.SlimeSeed.describe();
+                // mp12: no seed number outside the seed box itself
+                String using = "Slimes using the " + dev.natowb.natosatlas.client.SlimeSeed.source();
                 p.drawCenteredString(using, width / 2, slimeSeedField.y + 50, 0xFFAAAAAA);
-                p.drawCenteredString("Numbers or text, like the Create World seed box. Ctrl+V pastes.", width / 2, slimeSeedField.y + 62, 0xFFAAAAAA);
             }
 
             super.render(mouseX, mouseY, delta, scaleInfo);

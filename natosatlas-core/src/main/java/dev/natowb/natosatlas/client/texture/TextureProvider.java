@@ -58,6 +58,8 @@ public final class TextureProvider {
     public static final int ICON_FILL_ON = 34;
     public static final int ICON_FILL_OFF = 35;
     public static final int ICON_WIDTH_1 = 36; // 36..39 = stroke widths 1, 2, 3, 5
+    public static final int ICON_TOOL_ERASER_BLOCK = 40; // mp12
+    public static final int ICON_TOOL_ERASER_SHAPE = 41; // mp12
 
 
     private TextureProvider() {

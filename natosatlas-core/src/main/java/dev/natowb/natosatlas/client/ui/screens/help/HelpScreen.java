@@ -26,7 +26,7 @@ public class HelpScreen extends UIScreen {
             {"[Middle Mouse Drag]", "Pan the map"},
             {"[D]", "Show Overworld / Nether map"},
             {"[B]", "Markup mode (draw on the map)"},
-            {"Markup [1]-[6]", "Pan, Rect, Ellipse, Line, Pencil, Eraser"},
+            {"Markup [1]-[7]", "Pan, Rect, Ellipse, Line, Pencil, Block / Shape eraser"},
             {"Markup [Shift]", "Square / circle / 45 degree line"},
             {"Markup [F], [ and ]", "Fill on/off, thickness (blocks)"},
             {"Markup [Ctrl+Z]", "Undo"},

@@ -36,6 +36,11 @@ public abstract class UIElement {
     }
 
     protected void drawTooltip(String text, int mouseX, int mouseY, int canvasW, int canvasH) {
+        drawTooltipBox(text, mouseX, mouseY, canvasW, canvasH);
+    }
+
+    /** mp12: the standard tooltip box, for things that aren't elements (e.g. palette swatches). */
+    public static void drawTooltipBox(String text, int mouseX, int mouseY, int canvasW, int canvasH) {
         NAPainter p = NAClient.get().getPlatform().painter;
 
         int padding = 4;

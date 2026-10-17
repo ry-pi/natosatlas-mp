@@ -99,7 +99,7 @@ Tile saves now go to a temp file and are then moved into place, so the export ne
 
 <p align="center"><img src="assets/mp9-toolbar-preview.png" width="70%" alt="Markup toolbar"></p>
 
-- Tools (**1**-**6**): Pan, Rectangle, Ellipse, Line, Pencil, Eraser. Rectangles snap to whole blocks and show the block coordinates of all four corners plus the size (e.g. `63 x 34`), while drawing and afterwards. Lines show their length while drawing. Hold **Shift** for squares, circles and 45 degree lines.
+- Tools (**1**-**7** since mp12): Pan, Rectangle, Ellipse, Line, Pencil, Block eraser, Shape eraser. Rectangles snap to whole blocks and show the block coordinates of all four corners plus the size (e.g. `63 x 34`), while drawing and afterwards. Lines show their length while drawing. Hold **Shift** for squares, circles and 45 degree lines.
 - Fill on/off (**F**), thickness 1/2/3/5 (blocks since mp11; **[** and **]**), Undo (**Ctrl+Z**), Clear all (undoable), Save (**Ctrl+S**), Close (X).
 - Colour: 16 colour palette under the tools; the bar above it is the current colour.
 - Shapes are stored in world coordinates, so they stay in place when you pan, zoom or rotate. Right drag still rotates and middle drag pans with any tool.
@@ -126,6 +126,14 @@ The dimension toggle button moved from the top-left row (next to Markup) to the 
 - Cells are stored in world blocks, so they follow pan, zoom and rotation. Only cells that are on screen are drawn, and each shape's cells are cached.
 - Corner labels sit on the outer corners of the rectangle's corner blocks and name those blocks (inclusive). `25 x 29` is the number of blocks.
 - Saved markup PNGs show the same blocks.
+
+## 1.5.4-mp12: two erasers, consistent tooltips
+<p align="center"><img src="assets/mp12-preview.png" width="70%" alt="mp12 toolbar and tooltips"></p>
+
+- **Two erasers.** Block eraser (**6**) removes just the blocks under it (mp11). Shape eraser (**7**) deletes every shape it touches, in one piece (mp9). Each drag is one undo step for both. In the 2-wide toolbar, Pan now spans the first row so the two erasers sit side by side. To fit at GUI height 240 I removed the "Markup" title and the colour bar; the chosen colour is now the palette swatch with a white frame.
+- **Tooltips** all follow `Name (other useful keys) [hotkey]` and no longer describe what a button obviously does, e.g. `Rectangle (Shift = square) [2]`, `Pencil [5]`, `Showing: Nether [D]`, `Thickness: 2 blocks ([ = thinner) []]`. Palette swatches show the colour name.
+- **No slime seed on screen** outside the seed box: the slime button just says `Slime chunks`, and Settings says "Slimes using the server seed / custom seed" without the number. The "Numbers or text ... Ctrl+V pastes." hint is gone.
+- **Import hint** shows the folder from the game folder down, e.g. `\minecraft\natosatlas\servers\100.73.7.65-25567\import` (Nether: `...\import\DIM-1`), or the full path if it isn't inside the game folder.
 
 ## Building this fork
 Built with JDK 21. From the repo root:

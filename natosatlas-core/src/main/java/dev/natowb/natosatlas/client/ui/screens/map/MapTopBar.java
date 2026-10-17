@@ -44,13 +44,12 @@ public final class MapTopBar {
         return !viewHasCeiling;
     }
 
-    public static final String MAP_MODE_DISABLED_TOOLTIP =
-            "Map mode only applies in the Overworld";
+    public static final String MAP_MODE_DISABLED_TOOLTIP = MapTooltips.MAP_MODE_DISABLED;
 
     /** Icon tint of the greyed-out map mode button. */
     public static final int DISABLED_ICON_COLOR = 0xFFC8C8C8; // the cave icon is dark already; the flat disabled button shows the state
 
     public static String mapModeTooltip(boolean viewHasCeiling, String modeName) {
-        return viewHasCeiling ? MAP_MODE_DISABLED_TOOLTIP : "Mode: " + modeName;
+        return viewHasCeiling ? MAP_MODE_DISABLED_TOOLTIP : MapTooltips.mapMode(modeName);
     }
 }
