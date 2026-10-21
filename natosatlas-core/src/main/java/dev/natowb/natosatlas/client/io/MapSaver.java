@@ -127,6 +127,15 @@ public class MapSaver {
         }
     }
 
+    /** mp13: save a region that isn't in the live cache (the importer's off-screen tiles of another dimension). */
+    public void enqueueExternal(NACoord coord, NARegionPixelData region, File file) {
+        if (!running) {
+            storage.saveRegionBlocking(coord, region, file);
+            return;
+        }
+        enqueueTask(new SaveTask(storage, coord, region, file));
+    }
+
     // mp8: guards pending + pins against the worker. Separate from 'this' because stopAndDiscard()
     // holds 'this' while it joins the worker.
     private final Object pendingLock = new Object();

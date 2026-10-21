@@ -28,6 +28,8 @@ public final class SettingsStorage extends TextStorage {
         Settings.minimapEnabled = getBoolean("minimapEnabled", false);
         Settings.minimapPosition = getEnum("minimapPosition", Settings.MinimapPosition.class, Settings.MinimapPosition.TopRight);
         Settings.minimapScale = getFloat("minimapScale", 1f);
+        Settings.importOverworldPath = getString("importOverworldPath", "");
+        Settings.importNetherPath = getString("importNetherPath", "");
 
 
     }
@@ -49,5 +51,7 @@ public final class SettingsStorage extends TextStorage {
         put("minimapRenderMode", Settings.minimapRenderMode);
         put("minimapScale", Settings.minimapScale);
         put("minimapPosition", Settings.minimapPosition);
+        put("importOverworldPath", Settings.importOverworldPath.replace("\n", "").replace("\r", ""));
+        put("importNetherPath", Settings.importNetherPath.replace("\n", "").replace("\r", ""));
     }
 }

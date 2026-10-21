@@ -135,6 +135,15 @@ The dimension toggle button moved from the top-left row (next to Markup) to the 
 - **No slime seed on screen** outside the seed box: the slime button just says `Slime chunks`, and Settings says "Slimes using the server seed / custom seed" without the number. The "Numbers or text ... Ctrl+V pastes." hint is gone.
 - **Import hint** shows the folder from the game folder down, e.g. `\minecraft\natosatlas\servers\100.73.7.65-25567\import` (Nether: `...\import\DIM-1`), or the full path if it isn't inside the game folder.
 
+## 1.5.4-mp13: import straight from the server folder
+<p align="center"><img src="assets/mp13-preview.png" width="70%" alt="mp13 Import tab"></p>
+
+- **New Import tab** in Settings with two wide path boxes, **Overworld region folder** and **Nether region folder**, and one **Import** button that imports both into the world map of the server you're on. Nether data goes into the Nether map even while you're in the Overworld (and the other way round), so the dimension toggle (**D**) shows it straight away.
+- The boxes take the region folder itself or the world folder above it: `...\regen\world` finds `world\region`, and `...\regen\world_nether` finds `DIM-1\region`. Quotes around a pasted path are ignored. An empty box is skipped.
+- Both paths are saved in `settings.txt`. The boxes scroll for long paths and support Ctrl+V / Ctrl+C / Ctrl+X / Ctrl+A, Home and End.
+- **Re-imports only do what changed.** An index (`regions/import-index.txt` in the server's map folder) keeps each region file's size, modified time and header. Unchanged files are skipped without being opened, and in a changed file only chunks whose save timestamp changed are re-read. The status says e.g. `Imported 4 changed regions, skipped 120 unchanged`. **Shift-click** Import to redo everything. "Delete all map data" also clears the index.
+- Errors are shown in red under the button (`Overworld folder not found`, `Nether: no .mcr region files`). The old Import .mcr / Open folder buttons on the General tab still work and use the index too.
+
 ## Building this fork
 Built with JDK 21. From the repo root:
 ```bash

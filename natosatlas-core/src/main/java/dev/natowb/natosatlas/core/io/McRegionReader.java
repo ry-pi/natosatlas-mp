@@ -36,6 +36,18 @@ public final class McRegionReader {
         return out;
     }
 
+    /** mp13: the 8 KB header (1024 locations + 1024 save timestamps), or null if the file is shorter. */
+    public static byte[] readHeader(File file) {
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            if (raf.length() < 8192) return null;
+            byte[] h = new byte[8192];
+            raf.readFully(h);
+            return h;
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
     public static ChunkWrapper readChunk(File file, int lx, int lz) {
         try {
             byte[][] arrays = readArrays(file, lx, lz);

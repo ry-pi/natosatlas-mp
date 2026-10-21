@@ -19,7 +19,8 @@
         private enum Tab {
             GENERAL,
             ATLAS,
-            MINIMAP
+            MINIMAP,
+            IMPORT
         }
 
         private Tab activeTab = Tab.GENERAL;
@@ -31,6 +32,7 @@
         private UIElementButton generalTab;
         private UIElementButton worldMapTab;
         private UIElementButton minimapTab;
+        private UIElementButton importTab;
 
 
         @Override
@@ -55,11 +57,12 @@
 
             int tabY = headerY + headerHeight + 5;
 
-            int tabButtonWidth = 80;
+            // mp13: four tabs (Import added), a little narrower so they still fit small windows
+            int tabButtonWidth = 72;
             int tabButtonHeight = 20;
-            int tabSpacing = 10;
+            int tabSpacing = 6;
 
-            int tabWidth = (tabButtonWidth * 3) + (tabSpacing * 2);
+            int tabWidth = (tabButtonWidth * 4) + (tabSpacing * 3);
 
             int tabX = (width - tabWidth) / 2;
 
@@ -75,6 +78,10 @@
             minimapTab.setHandler(btn -> switchTab(Tab.MINIMAP));
             addButton(minimapTab);
 
+            importTab = new UIElementButton(204, tabX + (tabButtonWidth + tabSpacing) * 3, tabY, tabButtonWidth, tabButtonHeight, "Import");
+            importTab.setHandler(btn -> switchTab(Tab.IMPORT));
+            addButton(importTab);
+
             updateTabActiveStates();
 
 
@@ -84,6 +91,7 @@
         @Override
         public void onClose() {
             applySlimeSeed();
+            applyImportPaths();
             Settings.save();
         }
 
@@ -98,6 +106,8 @@
         public void tick() {
             super.tick();
             applySlimeSeed(); // live: the field's text is the override (blank = server seed); saved only when it changes
+            applyImportPaths();
+            if (importButton != null) importButton.label = dev.natowb.natosatlas.client.RegionImporter.get().isRunning() ? "Stop import" : "Import";
             if (deleteButton != null && deleteArmedUntil != 0 && System.currentTimeMillis() >= deleteArmedUntil) {
                 deleteArmedUntil = 0;
                 deleteButton.label = DELETE_LABEL;
@@ -107,6 +117,10 @@
         @Override
         public void keyPressed(char character, int keyCode) {
             boolean wasFocused = slimeSeedField != null && slimeSeedField.focused;
+            boolean enter = character == '\r' || character == '\n' || keyCode == org.lwjgl.input.Keyboard.KEY_RETURN;
+            for (UIElementTextField tf : new UIElementTextField[]{overworldPathField, netherPathField}) {
+                if (tf != null && tf.focused && enter) { tf.setFocused(false); applyImportPaths(); return; }
+            }
             super.keyPressed(character, keyCode);
             if (wasFocused && (character == '\r' || character == '\n' || keyCode == org.lwjgl.input.Keyboard.KEY_RETURN)) {
                 applySlimeSeed();
@@ -124,14 +138,18 @@
             generalTab.active = !(activeTab == Tab.GENERAL);
             worldMapTab.active = !(activeTab == Tab.ATLAS);
             minimapTab.active = !(activeTab == Tab.MINIMAP);
+            importTab.active = !(activeTab == Tab.IMPORT);
         }
 
         private void rebuildContent() {
             applySlimeSeed();
+            applyImportPaths();
             buttons.removeIf(b -> b.id >= 300);
             sliders.removeIf(s -> s.id >= 300);
             textFields.clear();
             slimeSeedField = null;
+            overworldPathField = netherPathField = null;
+            importButton = null;
             deleteButton = null;
 
             int listTop = headerY + 50;
@@ -148,6 +166,10 @@
 
                 case MINIMAP:
                     buildMinimapSettings(layout);
+                    break;
+
+                case IMPORT:
+                    buildImportSettings();
                     break;
             }
         }
@@ -215,6 +237,47 @@
                 }
             });
             addButton(deleteButton);
+        }
+
+        // mp13: Import tab: two wide path boxes (Overworld / Nether) and one Import button for both
+        private UIElementTextField overworldPathField, netherPathField;
+        private UIElementButton importButton;
+
+        private int importBoxWidth() {
+            return Math.max(200, Math.min(width - 40, 420));
+        }
+
+        private void applyImportPaths() {
+            if (overworldPathField != null) Settings.importOverworldPath = overworldPathField.getText();
+            if (netherPathField != null) Settings.importNetherPath = netherPathField.getText();
+        }
+
+        private void buildImportSettings() {
+            int bw = importBoxWidth();
+            int bx = width / 2 - bw / 2;
+            int y = headerY + 60;
+            overworldPathField = new UIElementTextField(bx, y, bw, 20, Settings.importOverworldPath);
+            overworldPathField.setMaxLength(1024);
+            addTextField(overworldPathField);
+            netherPathField = new UIElementTextField(bx, y + 36, bw, 20, Settings.importNetherPath);
+            netherPathField.setMaxLength(1024);
+            addTextField(netherPathField);
+
+            dev.natowb.natosatlas.client.RegionImporter imp = dev.natowb.natosatlas.client.RegionImporter.get();
+            boolean isMultiplayer = ClientWorldAccess.get().getWorldInfo() != null && ClientWorldAccess.get().getWorldInfo().isMultiplayer();
+            importButton = new UIElementButton(320, width / 2 - 75, y + 64, 150, 20, imp.isRunning() ? "Stop import" : "Import");
+            importButton.active = isMultiplayer;
+            importButton.setHandler(btn -> {
+                applyImportPaths();
+                Settings.save();
+                if (imp.isRunning()) imp.cancel();
+                else {
+                    boolean shift = org.lwjgl.input.Keyboard.isKeyDown(org.lwjgl.input.Keyboard.KEY_LSHIFT)
+                            || org.lwjgl.input.Keyboard.isKeyDown(org.lwjgl.input.Keyboard.KEY_RSHIFT);
+                    imp.startFromPaths(Settings.importOverworldPath, Settings.importNetherPath, shift);
+                }
+            });
+            addButton(importButton);
         }
 
         // mp7: two-click confirm for "Delete all map data"
@@ -336,6 +399,22 @@
                 if (!imageStatus.isEmpty()) p.drawCenteredString(imageStatus, width / 2, height - 12, 0xFF55FF55);
                 else if (ClientWorldAccess.get().getWorldInfo() != null)
                     p.drawCenteredString("Map images save to .minecraft/screenshots", width / 2, height - 12, 0xFFAAAAAA);
+            }
+
+            if (activeTab == Tab.IMPORT && overworldPathField != null) {
+                int lx = width / 2 - importBoxWidth() / 2;
+                p.drawString("Overworld region folder", lx, overworldPathField.y - 11, UITheme.TITLE_TEXT);
+                p.drawString("Nether region folder", lx, netherPathField.y - 11, UITheme.TITLE_TEXT);
+                dev.natowb.natosatlas.client.RegionImporter imp = dev.natowb.natosatlas.client.RegionImporter.get();
+                int sy = importButton.y + 26;
+                boolean mp = ClientWorldAccess.get().getWorldInfo() != null && ClientWorldAccess.get().getWorldInfo().isMultiplayer();
+                if (!mp) {
+                    p.drawCenteredString("Join the server to import its map", width / 2, sy, 0xFFFF5555);
+                } else {
+                    if (!imp.getStatus().isEmpty()) { p.drawCenteredString(imp.getStatus(), width / 2, sy, 0xFF55FF55); sy += 11; }
+                    if (!imp.getError().isEmpty()) { p.drawCenteredString(imp.getError(), width / 2, sy, 0xFFFF5555); sy += 11; }
+                    p.drawCenteredString("Unchanged regions are skipped. Shift-click Import to redo everything.", width / 2, sy, 0xFFAAAAAA);
+                }
             }
 
             if (activeTab == Tab.ATLAS && slimeSeedField != null) {

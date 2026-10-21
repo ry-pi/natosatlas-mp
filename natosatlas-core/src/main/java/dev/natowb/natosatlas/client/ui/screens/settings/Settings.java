@@ -28,6 +28,11 @@ public final class Settings {
     public static MapRenderMode mapRenderMode = MapRenderMode.Auto;
 
 
+    // mp13: server folders for the Import tab (region folders, or the world folder holding them)
+    public static String importOverworldPath = "";
+    public static String importNetherPath = "";
+
+
     // Minimap settings
     public static boolean minimapRotateWithPlayer = false;
     public static boolean minimapEnabled = false;

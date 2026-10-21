@@ -23,6 +23,7 @@ public class UIElementTextField extends UIElement {
     private int selectionEnd = 0;
 
     private int focusedTicks = 0;
+    private int scroll = 0; // mp13: first visible character, so long text (paths) scrolls inside the box
     private boolean dragging = false;
 
     public UIElementTextField(int x, int y, int w, int h, String initial) {
@@ -143,6 +144,13 @@ public class UIElementTextField extends UIElement {
             return;
         }
 
+        if (keyCode == Keyboard.KEY_HOME || keyCode == Keyboard.KEY_END) {
+            cursor = keyCode == Keyboard.KEY_HOME ? 0 : text.length();
+            if (shift) selectionEnd = cursor;
+            else clearSelection();
+            return;
+        }
+
         if (keyCode == Keyboard.KEY_LEFT) {
             if (cursor > 0) cursor--;
             if (shift) selectionEnd = cursor;
@@ -207,9 +215,10 @@ public class UIElementTextField extends UIElement {
 
     private int getCharIndexAtPixel(int px) {
         NAPainter p = NAClient.get().getPlatform().painter;
-        int pos = 0;
+        int pos = Math.min(scroll, text.length());
+        if (px < 0) return Math.max(0, pos - 1); // dragging left of the box scrolls back
         int currentX = 0;
-        for (int i = 0; i < text.length(); i++) {
+        for (int i = pos; i < text.length(); i++) {
             int w = p.getStringWidth(text.substring(i, i + 1));
             if (currentX + w / 2 >= px) return i;
             currentX += w;
@@ -227,19 +236,29 @@ public class UIElementTextField extends UIElement {
         int textY = y + (h - 8) / 2;
         int color = enabled ? UIThemeMinecraft.TEXTFIELD_TEXT : UIThemeMinecraft.TEXTFIELD_TEXT_DISABLED;
 
+        // mp13: keep the cursor inside the box, draw only what fits
+        int inner = w - 8;
+        cursor = Math.max(0, Math.min(cursor, text.length()));
+        if (scroll > cursor) scroll = cursor;
+        while (scroll < cursor && p.getStringWidth(text.substring(scroll, cursor)) > inner) scroll++;
+        while (scroll > 0 && p.getStringWidth(text.substring(scroll - 1)) <= inner) scroll--; // no empty tail
+        String vis = text.substring(scroll);
+        while (!vis.isEmpty() && p.getStringWidth(vis) > inner) vis = vis.substring(0, vis.length() - 1);
+        int visEnd = scroll + vis.length();
+
         if (hasSelection()) {
-            int min = getSelectionMin();
-            int max = getSelectionMax();
-            int sx1 = x + 4 + p.getStringWidth(text.substring(0, min));
-            int sx2 = x + 4 + p.getStringWidth(text.substring(0, max));
-            p.drawRect(sx1, y + 1, sx2, y + h - 1, UIThemeMinecraft.TEXTFIELD_SELECTION);
+            int min = Math.max(scroll, Math.min(getSelectionMin(), visEnd));
+            int max = Math.max(scroll, Math.min(getSelectionMax(), visEnd));
+            int sx1 = x + 4 + p.getStringWidth(text.substring(scroll, min));
+            int sx2 = x + 4 + p.getStringWidth(text.substring(scroll, max));
+            if (sx2 > sx1) p.drawRect(sx1, y + 1, sx2, y + h - 1, UIThemeMinecraft.TEXTFIELD_SELECTION);
         }
 
-        p.drawString(text, x + 4, textY, color, false);
+        p.drawString(vis, x + 4, textY, color, false);
 
         boolean showCursor = focused && (focusedTicks / 6) % 2 == 0;
         if (showCursor && !hasSelection()) {
-            int cx = x + 4 + p.getStringWidth(text.substring(0, cursor));
+            int cx = x + 4 + p.getStringWidth(text.substring(scroll, Math.min(cursor, visEnd)));
             p.drawRect(cx, y + 2, cx + 1, y + h - 2, color);
         }
     }
