@@ -16,23 +16,24 @@
 
         private int headerY;
 
+        // mp15: General is gone; its buttons moved to World map, Import and the new Debug tab
         private enum Tab {
-            GENERAL,
             ATLAS,
             MINIMAP,
-            IMPORT
+            IMPORT,
+            DEBUG
         }
 
-        private Tab activeTab = Tab.GENERAL;
+        private Tab activeTab = Tab.ATLAS;
 
         public SettingsScreen(UIScreen parent) {
             super(parent);
         }
 
-        private UIElementButton generalTab;
         private UIElementButton worldMapTab;
         private UIElementButton minimapTab;
         private UIElementButton importTab;
+        private UIElementButton debugTab;
 
 
         @Override
@@ -66,21 +67,21 @@
 
             int tabX = (width - tabWidth) / 2;
 
-            generalTab = new UIElementButton(201, tabX, tabY, tabButtonWidth, tabButtonHeight, "General");
-            generalTab.setHandler(btn -> switchTab(Tab.GENERAL));
-            addButton(generalTab);
-
-            worldMapTab = new UIElementButton(202, tabX + tabButtonWidth + tabSpacing, tabY, tabButtonWidth, tabButtonHeight, "World map");
+            worldMapTab = new UIElementButton(202, tabX, tabY, tabButtonWidth, tabButtonHeight, "World map");
             worldMapTab.setHandler(btn -> switchTab(Tab.ATLAS));
             addButton(worldMapTab);
 
-            minimapTab = new UIElementButton(203, tabX + (tabButtonWidth + tabSpacing) * 2, tabY, tabButtonWidth, tabButtonHeight, "Minimap");
+            minimapTab = new UIElementButton(203, tabX + tabButtonWidth + tabSpacing, tabY, tabButtonWidth, tabButtonHeight, "Minimap");
             minimapTab.setHandler(btn -> switchTab(Tab.MINIMAP));
             addButton(minimapTab);
 
-            importTab = new UIElementButton(204, tabX + (tabButtonWidth + tabSpacing) * 3, tabY, tabButtonWidth, tabButtonHeight, "Import");
+            importTab = new UIElementButton(204, tabX + (tabButtonWidth + tabSpacing) * 2, tabY, tabButtonWidth, tabButtonHeight, "Import");
             importTab.setHandler(btn -> switchTab(Tab.IMPORT));
             addButton(importTab);
+
+            debugTab = new UIElementButton(205, tabX + (tabButtonWidth + tabSpacing) * 3, tabY, tabButtonWidth, tabButtonHeight, "Debug");
+            debugTab.setHandler(btn -> switchTab(Tab.DEBUG));
+            addButton(debugTab);
 
             updateTabActiveStates();
 
@@ -135,7 +136,7 @@
         }
 
         private void updateTabActiveStates() {
-            generalTab.active = !(activeTab == Tab.GENERAL);
+            debugTab.active = !(activeTab == Tab.DEBUG);
             worldMapTab.active = !(activeTab == Tab.ATLAS);
             minimapTab.active = !(activeTab == Tab.MINIMAP);
             importTab.active = !(activeTab == Tab.IMPORT);
@@ -156,10 +157,6 @@
             UILayout layout = new UIVerticalLayout(width / 2, listTop, 5);
 
             switch (activeTab) {
-                case GENERAL:
-                    buildGeneralSettings(layout);
-                    break;
-
                 case ATLAS:
                     buildAtlasSettings(layout);
                     break;
@@ -171,59 +168,23 @@
                 case IMPORT:
                     buildImportSettings();
                     break;
+
+                case DEBUG:
+                    buildDebugSettings();
+                    break;
             }
         }
 
-        private void buildGeneralSettings(UILayout ignored) {
-            // mp7: two columns (like the Minimap tab) so the map image / delete buttons fit without pushing
-            // the import folder text at the bottom
-            UILayout layout = new UIVerticalLayout(width / 2 - 80, headerY + 50, 5);
+        /** mp15: Debug tab: debug info option and "Delete all map data" (two-click confirm, mp7). */
+        private void buildDebugSettings() {
+            UILayout layout = new UIVerticalLayout(width / 2, headerY + 50, 5);
             UIElementOptionButton debugButton =
                     new UIElementOptionButton(SettingsOption.DEBUG_INFO, layout, 150, 20);
             debugButton.setHandler(btn -> debugButton.cycle());
             debugButton.id = 300;
             addButton(debugButton);
-            boolean isMultiplayer = ClientWorldAccess.get().getWorldInfo().isMultiplayer();
-            UIElementButton existingButton =
-                    new UIElementButton(302, layout, 150, 20, "Generate Existing", !isMultiplayer);
-            existingButton.setHandler(btn ->
-                    NAClient.get().getPlatform().screen.openNacScreen(new GenerateScreen(this)));
-            addButton(existingButton);
 
-            // mp8: the import row is split: [Import .mcr][Open folder] in the same 150 px as the other buttons
-            dev.natowb.natosatlas.client.RegionImporter imp = dev.natowb.natosatlas.client.RegionImporter.get();
-            dev.natowb.natosatlas.client.ui.layout.UIPoint row = layout.next(150, 20);
-            UIElementButton importButton =
-                    new UIElementButton(311, row.x, row.y, 76, 20, imp.isRunning() ? "Stop import" : "Import .mcr");
-            importButton.active = isMultiplayer;
-            importButton.setHandler(btn -> {
-                if (imp.isRunning()) imp.cancel(); else imp.start();
-                rebuildContent();
-            });
-            addButton(importButton);
-
-            UIElementButton openImportButton =
-                    new UIElementButton(316, row.x + 80, row.y, 70, 20, "Open folder");
-            openImportButton.active = isMultiplayer;
-            openImportButton.setHandler(btn -> {
-                dev.natowb.natosatlas.client.RegionImporter.ensureFolders(); // import/ and import/DIM-1/
-                dev.natowb.natosatlas.client.FolderOpener.open(dev.natowb.natosatlas.client.RegionImporter
-                        .getImportDir(ClientWorldAccess.get().getWorldInfo().getDimensionId()));
-            });
-            addButton(openImportButton);
-
-            UILayout right = new UIVerticalLayout(width / 2 + 80, headerY + 50, 5);
-            UIElementButton saveFull = new UIElementButton(313, right, 150, 20, "Save map image (full)");
-            saveFull.setHandler(btn -> dev.natowb.natosatlas.client.io.WorldMapExport.start(false,
-                    dev.natowb.natosatlas.client.io.WorldMapExport.currentLayer()));
-            addButton(saveFull);
-
-            UIElementButton saveSmall = new UIElementButton(314, right, 150, 20, "Save map image (small)");
-            saveSmall.setHandler(btn -> dev.natowb.natosatlas.client.io.WorldMapExport.start(true,
-                    dev.natowb.natosatlas.client.io.WorldMapExport.currentLayer()));
-            addButton(saveSmall);
-
-            deleteButton = new UIElementButton(315, right, 150, 20, DELETE_LABEL);
+            deleteButton = new UIElementButton(315, layout, 150, 20, DELETE_LABEL);
             deleteArmedUntil = 0;
             deleteButton.setHandler(btn -> {
                 long now = System.currentTimeMillis();
@@ -255,17 +216,18 @@
         private void buildImportSettings() {
             int bw = importBoxWidth();
             int bx = width / 2 - bw / 2;
-            int y = headerY + 60;
+            // mp15: "Multiplayer" section (heading at importBase()), "Singleplayer" section below it
+            int y = importBase() + 21;
             overworldPathField = new UIElementTextField(bx, y, bw, 20, Settings.importOverworldPath);
             overworldPathField.setMaxLength(1024);
             addTextField(overworldPathField);
-            netherPathField = new UIElementTextField(bx, y + 36, bw, 20, Settings.importNetherPath);
+            netherPathField = new UIElementTextField(bx, y + 33, bw, 20, Settings.importNetherPath);
             netherPathField.setMaxLength(1024);
             addTextField(netherPathField);
 
             dev.natowb.natosatlas.client.RegionImporter imp = dev.natowb.natosatlas.client.RegionImporter.get();
             boolean isMultiplayer = ClientWorldAccess.get().getWorldInfo() != null && ClientWorldAccess.get().getWorldInfo().isMultiplayer();
-            importButton = new UIElementButton(320, width / 2 - 75, y + 64, 150, 20, imp.isRunning() ? "Stop import" : "Import");
+            importButton = new UIElementButton(320, width / 2 - 75, y + 57, 150, 20, imp.isRunning() ? "Stop import" : "Import");
             importButton.active = isMultiplayer;
             importButton.setHandler(btn -> {
                 applyImportPaths();
@@ -278,6 +240,18 @@
                 }
             });
             addButton(importButton);
+
+            // mp15: moved from the old General tab; generating from the save only works in singleplayer
+            UIElementButton existingButton = new UIElementButton(302, width / 2 - 75, importBase() + 136, 150, 20,
+                    "Generate Existing");
+            existingButton.active = !isMultiplayer;
+            existingButton.setHandler(btn ->
+                    NAClient.get().getPlatform().screen.openNacScreen(new GenerateScreen(this)));
+            addButton(existingButton);
+        }
+
+        private int importBase() {
+            return headerY + 50;
         }
 
         // mp7: two-click confirm for "Delete all map data"
@@ -285,7 +259,20 @@
         private UIElementButton deleteButton;
         private long deleteArmedUntil = 0;
 
-        private void buildAtlasSettings(UILayout layout) {
+        private void buildAtlasSettings(UILayout ignored) {
+            // mp15: two columns; the map image buttons (from the old General tab) on the right
+            UILayout layout = new UIVerticalLayout(width / 2 - 80, headerY + 50, 5);
+            UILayout right = new UIVerticalLayout(width / 2 + 80, headerY + 50, 5);
+            UIElementButton saveFull = new UIElementButton(313, right, 150, 20, "Save map image (full)");
+            saveFull.setHandler(btn -> dev.natowb.natosatlas.client.io.WorldMapExport.start(false,
+                    dev.natowb.natosatlas.client.io.WorldMapExport.currentLayer()));
+            addButton(saveFull);
+
+            UIElementButton saveSmall = new UIElementButton(314, right, 150, 20, "Save map image (small)");
+            saveSmall.setHandler(btn -> dev.natowb.natosatlas.client.io.WorldMapExport.start(true,
+                    dev.natowb.natosatlas.client.io.WorldMapExport.currentLayer()));
+            addButton(saveSmall);
+
             UIElementSlider zoomSlider =
                     new UIElementSlider(303, layout, 150, 20, Settings.defaultZoom, "Default Zoom");
             zoomSlider.setRange(MapConfig.MIN_ZOOM, MapConfig.MAX_ZOOM);
@@ -375,6 +362,15 @@
             }
         }
 
+        /** mp15: section heading with a thin rule, across the import box width. */
+        private void drawSection(String title, int y) {
+            NAPainter p = NAClient.get().getPlatform().painter;
+            int bw = importBoxWidth(), x0 = width / 2 - bw / 2;
+            p.drawString(title, x0, y, 0xFFFFFFA0);
+            int tw = p.getStringWidth(title);
+            p.drawRect(x0 + tw + 4, y + 4, x0 + bw, y + 5, 0x80FFFFA0);
+        }
+
         @Override
         public void render(int mouseX, int mouseY, float delta, UIScaleInfo scaleInfo) {
             NAPainter p = NAClient.get().getPlatform().painter;
@@ -382,19 +378,7 @@
             p.drawRect(0, 0, width, height, UITheme.PANEL_BG);
             p.drawCenteredString("Settings", width / 2, headerY + 4, UITheme.TITLE_TEXT);
 
-            if (activeTab == Tab.GENERAL && ClientWorldAccess.get().getWorldInfo() != null
-                    && ClientWorldAccess.get().getWorldInfo().isMultiplayer()) {
-                dev.natowb.natosatlas.client.RegionImporter imp = dev.natowb.natosatlas.client.RegionImporter.get();
-                int dim = ClientWorldAccess.get().getWorldInfo().getDimensionId();
-                java.io.File dir = dev.natowb.natosatlas.client.RegionImporter.getImportDir(dim);
-                p.drawCenteredString("Copy the server's region/*.mcr files into:", width / 2, height - 46, UITheme.TITLE_TEXT);
-                if (dir != null) p.drawCenteredString(dev.natowb.natosatlas.client.RegionImporter.displayPath(dir, dev.natowb.natosatlas.core.NAPaths.getMinecraftPath()), width / 2, height - 36, 0xFFAAAAAA);
-                String folderStatus = dev.natowb.natosatlas.client.FolderOpener.getStatus();
-                if (!folderStatus.isEmpty()) p.drawCenteredString(folderStatus, width / 2, height - 24, 0xFF55FF55);
-                else if (!imp.getStatus().isEmpty()) p.drawCenteredString(imp.getStatus(), width / 2, height - 24, 0xFF55FF55);
-            }
-
-            if (activeTab == Tab.GENERAL) {
+            if (activeTab == Tab.ATLAS) {
                 String imageStatus = dev.natowb.natosatlas.client.io.WorldMapExport.getStatus();
                 if (!imageStatus.isEmpty()) p.drawCenteredString(imageStatus, width / 2, height - 12, 0xFF55FF55);
                 else if (ClientWorldAccess.get().getWorldInfo() != null)
@@ -403,25 +387,29 @@
 
             if (activeTab == Tab.IMPORT && overworldPathField != null) {
                 int lx = width / 2 - importBoxWidth() / 2;
-                p.drawString("Overworld region folder", lx, overworldPathField.y - 11, UITheme.TITLE_TEXT);
-                p.drawString("Nether region folder", lx, netherPathField.y - 11, UITheme.TITLE_TEXT);
+                drawSection("Multiplayer", importBase());
+                p.drawString("Overworld region folder", lx, overworldPathField.y - 10, UITheme.TITLE_TEXT);
+                p.drawString("Nether region folder", lx, netherPathField.y - 10, UITheme.TITLE_TEXT);
+                drawSection("Singleplayer", importBase() + 125);
                 dev.natowb.natosatlas.client.RegionImporter imp = dev.natowb.natosatlas.client.RegionImporter.get();
-                int sy = importButton.y + 26;
+                int sy = importButton.y + 24;
                 boolean mp = ClientWorldAccess.get().getWorldInfo() != null && ClientWorldAccess.get().getWorldInfo().isMultiplayer();
                 if (!mp) {
                     p.drawCenteredString("Join the server to import its map", width / 2, sy, 0xFFFF5555);
                 } else {
-                    if (!imp.getStatus().isEmpty()) { p.drawCenteredString(imp.getStatus(), width / 2, sy, 0xFF55FF55); sy += 11; }
-                    if (!imp.getError().isEmpty()) { p.drawCenteredString(imp.getError(), width / 2, sy, 0xFFFF5555); sy += 11; }
-                    p.drawCenteredString("Unchanged regions are skipped. Shift-click Import to redo everything.", width / 2, sy, 0xFFAAAAAA);
+                    // mp15: two lines at most (status, then the error or the hint) so the Singleplayer section fits at GUI height 270
+                    if (!imp.getStatus().isEmpty()) { p.drawCenteredString(imp.getStatus(), width / 2, sy, 0xFF55FF55); sy += 10; }
+                    if (!imp.getError().isEmpty()) p.drawCenteredString(imp.getError(), width / 2, sy, 0xFFFF5555);
+                    else p.drawCenteredString("Unchanged regions are skipped. Shift-click Import to redo everything.", width / 2, sy, 0xFFAAAAAA);
                 }
             }
 
             if (activeTab == Tab.ATLAS && slimeSeedField != null) {
-                p.drawCenteredString("Slime seed (blank = server seed)", width / 2, slimeSeedField.y - 11, UITheme.TITLE_TEXT);
+                int cx = slimeSeedField.x + 75;
+                p.drawCenteredString("Slime seed (blank = server seed)", cx, slimeSeedField.y - 11, UITheme.TITLE_TEXT);
                 // mp12: no seed number outside the seed box itself
                 String using = "Slimes using the " + dev.natowb.natosatlas.client.SlimeSeed.source();
-                p.drawCenteredString(using, width / 2, slimeSeedField.y + 50, 0xFFAAAAAA);
+                p.drawCenteredString(using, cx, slimeSeedField.y + 50, 0xFFAAAAAA);
             }
 
             super.render(mouseX, mouseY, delta, scaleInfo);

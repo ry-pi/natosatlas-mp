@@ -153,6 +153,15 @@ The dimension toggle button moved from the top-left row (next to Markup) to the 
 - Pick Y with the slider at the right edge (drag it, Y 127 at the top, blue tick at sea level 64), the **+ / -** buttons, **Shift + mouse wheel**, or **Up / Down** (Shift = 8 levels). The current Y is shown next to the handle.
 - Data: chunks your client has loaded (in the dimension you're in) plus the server region files set on the Import tab (or the old import folder). Works for the Overworld and the Nether (**D**). Tiles are rendered on demand, nearest first, a few milliseconds per frame, and the last 6 Y levels stay cached.
 
+## 1.5.4-mp15: Settings reorganised
+<p align="center"><img src="assets/mp15-preview.png" width="90%" alt="mp15 Import and Debug tabs"></p>
+
+- Tabs are now **World map, Minimap, Import, Debug**, and Settings opens on World map. The General tab is gone.
+- **World map** tab: the old options are in the left column, and **Save map image (full)** and **Save map image (small)** are in the right column, with the "Map images save to .minecraft/screenshots" line underneath.
+- **Import** tab has two sections. **Multiplayer** holds the Overworld and Nether region folder boxes, the Import button (it shows **Stop import** while an import runs, and clicking it then cancels), the status and the hint. **Singleplayer** holds **Generate Existing**, which is greyed out in multiplayer.
+- **Debug** tab: **Debug Info** and **Delete all map data** (still asks you to click twice).
+- The old **Import .mcr** and **Open folder** buttons, and the "copy region files into" hint, are removed. Use the Import tab.
+
 ## Building this fork
 Built with JDK 21. From the repo root:
 ```bash
