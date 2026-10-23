@@ -16,7 +16,7 @@ public final class MapTopBar {
     }
 
     /** Right to left. */
-    public enum Slot {WAYPOINTS, SLIME, GRID, ENTITIES, MAP_MODE, DIMENSION}
+    public enum Slot {WAYPOINTS, SLIME, SPAWNERS, GRID, ENTITIES, MAP_MODE, LAYER, DIMENSION} // mp14: + spawners, layer
 
     public static final int SIZE = 20, GAP = 5, CENTER_Y = 15;
 

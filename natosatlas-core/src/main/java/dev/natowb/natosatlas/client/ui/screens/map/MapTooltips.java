@@ -32,6 +32,26 @@ public final class MapTooltips {
     public static final String SLIME = "Slime chunks";
     public static final String GRID = "Grid";
 
+    /** mp14: Off / All / one mob type; clicking cycles. */
+    public static String spawners(String filter) {
+        return "Spawners: " + filter;
+    }
+
+    public static String layer(boolean on, int y) {
+        return format(on ? "Layer view: Y " + y : "Layer view", null, "L");
+    }
+
+    public static final String LAYER_UP = format("Layer up", "Shift+wheel", "Up");
+    public static final String LAYER_DOWN = format("Layer down", "Shift+wheel", "Down");
+
+    public static String layerSlider(int y) {
+        return format("Y " + y, "drag, Shift+wheel", "Up/Down");
+    }
+
+    public static String spawner(String mob, int x, int y, int z) {
+        return mob + " spawner: " + x + " " + y + " " + z + " (click to copy)";
+    }
+
     public static String entities(String mode) {
         return "Entities: " + mode;
     }

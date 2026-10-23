@@ -50,16 +50,19 @@ public final class McRegionReader {
 
     public static ChunkWrapper readChunk(File file, int lx, int lz) {
         try {
-            byte[][] arrays = readArrays(file, lx, lz);
+            List<Spawner> sp = new ArrayList<>();
+            byte[][] arrays = readArrays(file, lx, lz, sp);
             if (arrays == null) return null;
-            return new ArrayChunk(arrays[0], arrays[1], arrays[2], arrays[3]);
+            ArrayChunk c = new ArrayChunk(arrays[0], arrays[1], arrays[2], arrays[3]);
+            c.spawners = sp;
+            return c;
         } catch (Throwable t) {
             return null;
         }
     }
 
     /** Returns {blocks, data, blockLight, skyLight} or null. */
-    static byte[][] readArrays(File file, int lx, int lz) throws IOException {
+    static byte[][] readArrays(File file, int lx, int lz, List<Spawner> sp) throws IOException {
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             long len = raf.length();
             if (len < 8192) return null;
@@ -83,7 +86,7 @@ public final class McRegionReader {
             byte[][] res = new byte[4][];
             if (din.readByte() != 10) return null; // root compound
             skipString(din);
-            readCompound(din, res, 0);
+            readCompound(din, res, 0, sp);
             if (res[0] == null || res[0].length != 32768) return null;
             if (res[1] == null || res[1].length != 16384) res[1] = new byte[16384];
             if (res[2] == null || res[2].length != 16384) res[2] = new byte[16384];
@@ -92,7 +95,38 @@ public final class McRegionReader {
         }
     }
 
-    private static void readCompound(DataInputStream in, byte[][] res, int depth) throws IOException {
+    /** mp14: a mob spawner tile entity (block coordinates). */
+    public static final class Spawner {
+        public final int x, y, z;
+        public final String mob;
+        public Spawner(int x, int y, int z, String mob) { this.x = x; this.y = y; this.z = z; this.mob = mob; }
+    }
+
+    /** mp14: Level.TileEntities is a list of compounds; keep the ones with id "MobSpawner". */
+    private static void readTileEntities(DataInputStream in, List<Spawner> out, int depth) throws IOException {
+        int et = in.readByte();
+        int n = in.readInt();
+        if (n < 0 || n > 1 << 20) throw new IOException("bad list");
+        if (et != 10) { for (int i = 0; i < n; i++) skipPayload(in, et, depth + 1); return; }
+        for (int i = 0; i < n; i++) {
+            String id = null, mob = null;
+            int x = 0, y = 0, z = 0;
+            while (true) {
+                int t = in.readByte();
+                if (t == 0) break;
+                String name = in.readUTF();
+                if (t == 8 && name.equals("id")) id = in.readUTF();
+                else if (t == 8 && name.equals("EntityId")) mob = in.readUTF();
+                else if (t == 3 && name.equals("x")) x = in.readInt();
+                else if (t == 3 && name.equals("y")) y = in.readInt();
+                else if (t == 3 && name.equals("z")) z = in.readInt();
+                else skipPayload(in, t, depth + 1);
+            }
+            if ("MobSpawner".equals(id)) out.add(new Spawner(x, y, z, mob == null || mob.isEmpty() ? "Pig" : mob));
+        }
+    }
+
+    private static void readCompound(DataInputStream in, byte[][] res, int depth, List<Spawner> sp) throws IOException {
         if (depth > 16) throw new IOException("nbt too deep");
         while (true) {
             int t = in.readByte();
@@ -107,8 +141,10 @@ public final class McRegionReader {
                 else if (name.equals("Data")) res[1] = b;
                 else if (name.equals("BlockLight")) res[2] = b;
                 else if (name.equals("SkyLight")) res[3] = b;
+            } else if (t == 9 && name.equals("TileEntities")) {
+                readTileEntities(in, sp, depth);
             } else if (t == 10) {
-                readCompound(in, res, depth + 1);
+                readCompound(in, res, depth + 1, sp);
             } else {
                 skipPayload(in, t, depth);
             }
@@ -147,6 +183,8 @@ public final class McRegionReader {
     /** ChunkWrapper over vanilla b1.7.3 arrays, with bounds clamping. */
     public static final class ArrayChunk extends ChunkWrapper {
         private final byte[] blocks, data, blockLight, skyLight;
+        /** mp14: mob spawners in this chunk (from TileEntities), never null. */
+        public List<Spawner> spawners = new ArrayList<>();
 
         public ArrayChunk(byte[] blocks, byte[] data, byte[] blockLight, byte[] skyLight) {
             super(null, 128);

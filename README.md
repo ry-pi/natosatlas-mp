@@ -144,6 +144,15 @@ The dimension toggle button moved from the top-left row (next to Markup) to the 
 - **Re-imports only do what changed.** An index (`regions/import-index.txt` in the server's map folder) keeps each region file's size, modified time and header. Unchanged files are skipped without being opened, and in a changed file only chunks whose save timestamp changed are re-read. The status says e.g. `Imported 4 changed regions, skipped 120 unchanged`. **Shift-click** Import to redo everything. "Delete all map data" also clears the index.
 - Errors are shown in red under the button (`Overworld folder not found`, `Nether: no .mcr region files`). The old Import .mcr / Open folder buttons on the General tab still work and use the index too.
 
+## 1.5.4-mp14: spawners and Layer view
+<p align="center"><img src="assets/mp14-preview.png" width="70%" alt="mp14 spawners and Layer view"></p>
+
+- **Spawners.** The region import now also reads each chunk's tile entities and keeps every mob spawner (mob type and X Y Z) per dimension in `regions/spawners.txt`. Unchanged regions and chunks keep their spawners; a re-read chunk replaces only its own; Shift-click Import rebuilds them all. Run Import once after updating so the spawners get picked up (Shift-click to read every chunk, since unchanged chunks are skipped).
+- New **Spawners** button in the top-right row. Clicking it cycles `Off`, `All`, `Spider`, `Zombie`, `Skeleton`, `Pig` (tooltip `Spawners: Spider`). Each spawner is a small square: red = Spider, green = Zombie, white = Skeleton, pink = Pig. Hover one for `Spider spawner: 120 34 -56 (click to copy)`; left-click copies `120 34 -56` to the clipboard.
+- **Layer view** (button in the top-right row, or **L**): the map shows the exact horizontal slice of blocks at one Y level. Solid blocks use their map colour (a bit darker when buried, full when open above), air is dark with a faint view of the floor one block below, and torch-lit air is tinted warm, so caves and tunnels stand out.
+- Pick Y with the slider at the right edge (drag it, Y 127 at the top, blue tick at sea level 64), the **+ / -** buttons, **Shift + mouse wheel**, or **Up / Down** (Shift = 8 levels). The current Y is shown next to the handle.
+- Data: chunks your client has loaded (in the dimension you're in) plus the server region files set on the Import tab (or the old import folder). Works for the Overworld and the Nether (**D**). Tiles are rendered on demand, nearest first, a few milliseconds per frame, and the last 6 Y levels stay cached.
+
 ## Building this fork
 Built with JDK 21. From the repo root:
 ```bash

@@ -32,6 +32,10 @@ public final class Settings {
     public static String importOverworldPath = "";
     public static String importNetherPath = "";
 
+    // mp14: world map spawner markers (Off / All / one mob type) and the Layer view's Y level
+    public static String spawnerFilter = "All";
+    public static int layerY = 40;
+
 
     // Minimap settings
     public static boolean minimapRotateWithPlayer = false;

@@ -54,6 +54,12 @@ public class MapScreen extends UIScreen {
     private final MapStageGrid gridPainter = new MapStageGrid();
     private final MapStageEntities entitiesPainter = new MapStageEntities();
     private final MapStageWaypoints waypointsPainter = new MapStageWaypoints();
+    private final MapStageSpawners spawnersPainter = new MapStageSpawners();
+
+    // mp14: Layer view (exact block slice at Settings.layerY) and spawner markers
+    private static boolean layerView = false;
+    private boolean draggingLayer = false;
+    private dev.natowb.natosatlas.core.io.McRegionReader.Spawner hoveredSpawner = null;
 
     private int activeLayer = 0;
     private long lastLeftClickTime = 0;
@@ -179,6 +185,37 @@ public class MapScreen extends UIScreen {
         });
         slimeChunksButton.setTooltip(MapTooltips.SLIME); // mp12: never the seed
         addButton(slimeChunksButton);
+
+        // mp14: spawners (click cycles Off / All / Spider / Zombie / Skeleton / Pig)
+        UIElementIconButton spawnerButton = new UIElementIconButton(111, top.get(MapTopBar.Slot.SPAWNERS)[0], top.get(MapTopBar.Slot.SPAWNERS)[1], 20, 20,
+                spawnerIcon());
+        spawnerButton.setTooltip(MapTooltips.spawners(Settings.spawnerFilter));
+        if (!"Off".equals(Settings.spawnerFilter) && !"All".equals(Settings.spawnerFilter))
+            spawnerButton.setColor(MapSpawners.color(Settings.spawnerFilter));
+        spawnerButton.setHandler(btn -> {
+            Settings.spawnerFilter = MapSpawners.next(Settings.spawnerFilter);
+            Settings.save();
+            buildButtons();
+        });
+        addButton(spawnerButton);
+
+        // mp14: Layer view toggle (+ its Y slider buttons at the right edge)
+        UIElementIconButton layerButton = new UIElementIconButton(112, top.get(MapTopBar.Slot.LAYER)[0], top.get(MapTopBar.Slot.LAYER)[1], 20, 20,
+                layerView ? ICON_LAYER_ENABLED : ICON_LAYER_DISABLED);
+        layerButton.setTooltip(MapTooltips.layer(layerView, Settings.layerY));
+        layerButton.setHandler(btn -> toggleLayerView());
+        addButton(layerButton);
+        if (layerView) {
+            int[] up = MapLayerSlider.upButton(width, height), dn = MapLayerSlider.downButton(width, height);
+            UIElementIconButton upButton = new UIElementIconButton(113, up[0], up[1], 20, 20, ICON_PLUS);
+            upButton.setTooltip(MapTooltips.LAYER_UP);
+            upButton.setHandler(btn -> setLayerY(Settings.layerY + 1));
+            addButton(upButton);
+            UIElementIconButton downButton = new UIElementIconButton(114, dn[0], dn[1], 20, 20, ICON_MINUS);
+            downButton.setTooltip(MapTooltips.LAYER_DOWN);
+            downButton.setHandler(btn -> setLayerY(Settings.layerY - 1));
+            addButton(downButton);
+        }
 
         UIElementIconButton gridButton = new UIElementIconButton(107, top.get(MapTopBar.Slot.GRID)[0], top.get(MapTopBar.Slot.GRID)[1], 20, 20, ICON_GRID_ENABLED);
         gridButton.setTooltip(MapTooltips.GRID);
@@ -347,7 +384,21 @@ public class MapScreen extends UIScreen {
         Set<Long> visible = viewport.computeVisibleRegions();
 
 
-        regionPainter.draw(ctx, visible, activeLayer);
+        boolean sliceBusy = false;
+        if (layerView) {
+            // mp14: exact slice at Y, from loaded chunks (your dimension) and the imported region files
+            double[] c = MapProjection.screenToWorld(ctx, width / 2.0, height / 2.0);
+            java.util.Map<Long, Integer> tex = dev.natowb.natosatlas.client.SliceRenderer.get()
+                    .update(viewDim, Settings.layerY, !isForeign(), visible, c[0], c[1]);
+            for (java.util.Map.Entry<Long, Integer> e : tex.entrySet()) {
+                NACoord rc = NACoord.fromKey(e.getKey());
+                painter.drawTexture(e.getValue(), rc.x * NAConstants.PIXELS_PER_CANVAS_REGION, rc.z * NAConstants.PIXELS_PER_CANVAS_REGION,
+                        NAConstants.PIXELS_PER_CANVAS_REGION, NAConstants.PIXELS_PER_CANVAS_REGION);
+            }
+            sliceBusy = dev.natowb.natosatlas.client.SliceRenderer.get().isBusy(viewDim, Settings.layerY, visible);
+        } else {
+            regionPainter.draw(ctx, visible, activeLayer);
+        }
         slimePainter.draw(ctx, visible, activeLayer);
         gridPainter.draw(ctx, visible, activeLayer);
         entitiesPainter.setDisplayMode(Settings.entityDisplayMode);
@@ -361,6 +412,9 @@ public class MapScreen extends UIScreen {
             NAEntity player = ClientWorldAccess.get().getPlayer();
             if (ghost != null && player != null) entitiesPainter.drawGhostPlayer(ctx, ghost[0], ghost[1], player.yaw);
         }
+        java.util.List<dev.natowb.natosatlas.core.io.McRegionReader.Spawner> spawners = dev.natowb.natosatlas.client.SpawnerStore.forDim(viewDim);
+        hoveredSpawner = markupMode ? null : MapSpawners.hovered(ctx, spawners, Settings.spawnerFilter, mouseX, mouseY, 6);
+        spawnersPainter.draw(ctx, spawners, Settings.spawnerFilter, hoveredSpawner);
         renderMouseBlockHighlight(ctx);
         viewport.end();
 
@@ -390,11 +444,23 @@ public class MapScreen extends UIScreen {
             painter.drawCenteredString(imageStatus, width / 2, statusY, 0xFF55FF55);
             statusY += 12;
         }
+        if (layerView) {
+            String ls = "Layer view: Y " + Settings.layerY + (sliceBusy ? " - reading chunks..." : "");
+            if (!dev.natowb.natosatlas.client.SliceRenderer.get().hasRegionFiles(viewDim))
+                ls += isForeign() ? " - no region folder set (Options > Import)" : " - loaded chunks only (set region folders in Options > Import)";
+            int ly = Math.max(statusY, 30); // under the button rows, which can reach the middle on narrow screens
+            painter.drawCenteredString(ls, width / 2, ly, 0xFFA0E0FF);
+            statusY = ly + 12;
+        }
         if (!toast.isEmpty() && System.currentTimeMillis() - toastTime < 4000) {
             painter.drawCenteredString(toast, width / 2, statusY, 0xFFFFFFA0);
         }
         if (markupMode) renderToolbarPanel(mouseX, mouseY);
         super.render(mouseX, mouseY, delta, scaleInfo);
+        if (layerView) renderLayerSlider(mouseX, mouseY);
+        if (hoveredSpawner != null && !markupMode) {
+            dev.natowb.natosatlas.client.ui.elements.UIElement.drawTooltipBox(MapTooltips.spawner(hoveredSpawner.mob, hoveredSpawner.x, hoveredSpawner.y, hoveredSpawner.z), mouseX, mouseY, width, height);
+        }
         if (markupMode && toolbar != null) { // mp12: colour names on the palette
             int sw = toolbar.swatchAt(mouseX, mouseY);
             if (sw >= 0) dev.natowb.natosatlas.client.ui.elements.UIElement.drawTooltipBox(MapTooltips.colour(sw), mouseX, mouseY, width, height);
@@ -465,6 +531,21 @@ public class MapScreen extends UIScreen {
     public void mouseDown(int x, int y, int button) {
         super.mouseDown(x, y, button);
         if (markupMode && markupMouseDown(x, y, button)) return;
+        if (button == 0 && layerView && MapLayerSlider.onTrack(width, height, x, y)) { // mp14
+            draggingLayer = true;
+            setLayerY(MapLayerSlider.yAt(width, height, y));
+            return;
+        }
+        if (button == 0 && hoveredSpawner != null) { // mp14: copy spawner coordinates
+            String c = hoveredSpawner.x + " " + hoveredSpawner.y + " " + hoveredSpawner.z;
+            try {
+                java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new java.awt.datatransfer.StringSelection(c), null);
+                showToast("Copied " + hoveredSpawner.mob + " spawner: " + c);
+            } catch (Throwable t) {
+                showToast(hoveredSpawner.mob + " spawner: " + c + " (couldn't copy)");
+            }
+            return;
+        }
         if (button == 2) { // mp9: middle drag pans too
             viewport.dragStart(x, y);
             return;
@@ -525,6 +606,7 @@ public class MapScreen extends UIScreen {
     public void mouseDrag(int x, int y, int button) {
         super.mouseDrag(x, y, button);
         if (markupMode && markupMouseDrag(x, y, button)) return;
+        if (draggingLayer) { setLayerY(MapLayerSlider.yAt(width, height, y)); return; }
         if (button == 0 || button == 2) viewport.dragMove(x, y);
         if (button == 1) viewport.rotateMove(x, y);
     }
@@ -533,12 +615,17 @@ public class MapScreen extends UIScreen {
     public void mouseUp(int x, int y, int button) {
         super.mouseUp(x, y, button);
         if (markupMode && markupMouseUp(x, y, button)) return;
+        if (draggingLayer) { draggingLayer = false; Settings.save(); return; }
         if (button == 0 || button == 2) viewport.dragEnd();
         if (button == 1) viewport.rotateEnd();
     }
 
     @Override
     public void mouseScroll(int amount) {
+        if (layerView && shiftDown()) { // mp14: Shift+wheel = layer up / down
+            setLayerY(Settings.layerY + Integer.signum(amount));
+            return;
+        }
         viewport.zoom(amount);
     }
 
@@ -572,6 +659,10 @@ public class MapScreen extends UIScreen {
         if (keyCode == Keyboard.KEY_B && !markupMode) {
             enterMarkup();
         }
+
+        if (keyCode == Keyboard.KEY_L && !ctrlDown()) toggleLayerView(); // mp14
+        if (layerView && keyCode == Keyboard.KEY_UP) setLayerY(Settings.layerY + (shiftDown() ? 8 : 1));
+        if (layerView && keyCode == Keyboard.KEY_DOWN) setLayerY(Settings.layerY - (shiftDown() ? 8 : 1));
     }
 
     // =========================================================================================== mp9: dimension view
@@ -581,6 +672,46 @@ public class MapScreen extends UIScreen {
         super.onClose();
         // free the other dimension's GL textures (also runs when Options/Help open; init() reloads them lazily)
         if (foreign != null) foreign.clear();
+    }
+
+    // =========================================================================================== mp14: layer view
+
+    private int spawnerIcon() {
+        return "Off".equals(Settings.spawnerFilter) ? ICON_SPAWNER_DISABLED : ICON_SPAWNER_ENABLED;
+    }
+
+    private void toggleLayerView() {
+        layerView = !layerView;
+        if (layerView) dev.natowb.natosatlas.client.SliceRenderer.get().clear(); // pick up new imports / paths
+        buildButtons();
+    }
+
+    private void setLayerY(int y) {
+        y = Math.max(0, Math.min(127, y));
+        if (y == Settings.layerY) return;
+        Settings.layerY = y;
+        if (!draggingLayer) Settings.save();
+        buildButtons(); // tooltip of the layer button shows Y
+    }
+
+    private void renderLayerSlider(int mx, int my) {
+        int[] t = MapLayerSlider.track(width, height);
+        painter.drawRect(t[0] - 1, t[1] - 1, t[2] + 1, t[3] + 1, 0xFF000000);
+        painter.drawRect(t[0], t[1], t[2], t[3], 0xFF404048);
+        // sea level (Y 64) tick
+        int sea = MapLayerSlider.handleY(width, height, 64);
+        painter.drawRect(t[0], sea, t[2], sea + 1, 0xFF4060C0);
+        int hy = MapLayerSlider.handleY(width, height, Settings.layerY);
+        boolean hover = draggingLayer || MapLayerSlider.onTrack(width, height, mx, my);
+        painter.drawRect(t[0] - 4, hy - 3, t[2] + 4, hy + 3, 0xFF000000);
+        painter.drawRect(t[0] - 3, hy - 2, t[2] + 3, hy + 2, hover ? 0xFFFFFFA0 : 0xFFE0E0E0);
+        String label = "Y " + Settings.layerY;
+        int lw = painter.getStringWidth(label);
+        int lx = t[0] - 8 - lw;
+        painter.drawRect(lx - 3, hy - 6, lx + lw + 2, hy + 6, 0xC0000000);
+        painter.drawStringWithShadow(label, lx, hy - 4, 0xFFFFFFFF);
+        if (hover && !draggingLayer)
+            dev.natowb.natosatlas.client.ui.elements.UIElement.drawTooltipBox(MapTooltips.layerSlider(Settings.layerY), mx, my, width, height);
     }
 
     private boolean isForeign() {

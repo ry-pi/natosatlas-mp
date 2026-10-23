@@ -204,6 +204,7 @@ public final class RegionImporter {
         error = "";
         changedRegions = skippedRegions = skippedChunks = 0;
         index = ImportIndex.load();
+        if (force) for (Object[] d : dirs) SpawnerStore.clearDim((Integer) d[1]); // mp14: full re-import rebuilds spawners
         int files = 0;
         // other dimensions first, file by file, so only one off-screen region is held at a time
         dirs.sort((a, b) -> Boolean.compare((Integer) a[1] == dim, (Integer) b[1] == dim));
@@ -240,6 +241,7 @@ public final class RegionImporter {
         if (running) status = "Import: 0 / " + total + " chunks";
         else {
             index.save(); // headers of files whose chunks were all unchanged
+            SpawnerStore.save();
             status = files == 0 ? "Import: no .mcr files found" : summary();
         }
         LogUtil.info("[Import] Starting: {} region files ({} changed, {} unchanged), {} chunks", files, changedRegions, skippedRegions, total);
@@ -273,11 +275,18 @@ public final class RegionImporter {
         }
         ChunkWrapper w = McRegionReader.readChunk(job.file, lx, lz);
         if (w == null) { failed++; return; }
+        recordSpawners(job.dim, coord, w);
         for (NALayer layer : LayerRegistry.getLayers()) {
             NAChunk chunk = layer.builder.build(coord, w);
             if (chunk.isEmpty) continue;
             ChunkRenderer.render(foreignData[layer.id], coord, chunk, layer.usesBlockLight);
         }
+    }
+
+    /** mp14: a re-read chunk replaces its own spawners (chunks skipped as unchanged keep theirs). */
+    private static void recordSpawners(int dim, NACoord coord, ChunkWrapper w) {
+        if (w instanceof McRegionReader.ArrayChunk)
+            SpawnerStore.setChunk(dim, coord.x, coord.z, ((McRegionReader.ArrayChunk) w).spawners);
     }
 
     private void flushForeign() {
@@ -306,6 +315,7 @@ public final class RegionImporter {
         if (running) {
             LogUtil.info("[Import] Cancelled at {}/{}", done, total);
             if (index != null) index.save(); // keep the files that did finish
+            SpawnerStore.save();
             status = "Import stopped at " + done + " / " + total + " chunks";
         }
         running = false;
@@ -333,7 +343,7 @@ public final class RegionImporter {
                     // overwrite them, live scanning repaints the circle around the player as usual.
                     ChunkWrapper w = McRegionReader.readChunk(job.file, lx, lz);
                     if (w == null) failed++;
-                    else MapUpdater.get().updateChunk(coord, w);
+                    else { recordSpawners(job.dim, coord, w); MapUpdater.get().updateChunk(coord, w); }
                 }
             } catch (Throwable e) {
                 failed++;
@@ -346,6 +356,7 @@ public final class RegionImporter {
             running = false;
             flushForeign();
             index.save();
+            SpawnerStore.save();
             status = summary();
             LogUtil.info("[Import] {} ({} chunks, {} unchanged chunks skipped)", status, done - failed, skippedChunks);
         }

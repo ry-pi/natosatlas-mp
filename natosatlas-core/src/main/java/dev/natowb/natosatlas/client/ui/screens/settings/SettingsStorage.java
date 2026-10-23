@@ -30,6 +30,8 @@ public final class SettingsStorage extends TextStorage {
         Settings.minimapScale = getFloat("minimapScale", 1f);
         Settings.importOverworldPath = getString("importOverworldPath", "");
         Settings.importNetherPath = getString("importNetherPath", "");
+        Settings.spawnerFilter = getString("spawnerFilter", "All");
+        Settings.layerY = Math.max(0, Math.min(127, getInt("layerY", 40)));
 
 
     }
@@ -53,5 +55,7 @@ public final class SettingsStorage extends TextStorage {
         put("minimapPosition", Settings.minimapPosition);
         put("importOverworldPath", Settings.importOverworldPath.replace("\n", "").replace("\r", ""));
         put("importNetherPath", Settings.importNetherPath.replace("\n", "").replace("\r", ""));
+        put("spawnerFilter", Settings.spawnerFilter);
+        put("layerY", Settings.layerY);
     }
 }
