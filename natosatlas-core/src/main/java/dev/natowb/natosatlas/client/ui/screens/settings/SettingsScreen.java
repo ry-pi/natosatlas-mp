@@ -202,12 +202,17 @@
                     Settings.save();
                 });
                 addButton(btn);
+                if (b == MapButtons.MARKUP) { // mp18: no markup mode to enter in the Integrated layout
+                    markupToggle = btn;
+                    btn.active = !Settings.markupIntegrated;
+                }
             }
             // mp17: markup layout (Segregated = left panel, Integrated = bar along the top)
             UIElementButton lay = new UIElementButton(id++, lx, top + li * (rowH + gap) + 12, 150, rowH, layoutLabel());
             lay.setHandler(x2 -> {
                 Settings.markupIntegrated = !Settings.markupIntegrated;
                 x2.label = layoutLabel();
+                if (markupToggle != null) markupToggle.active = !Settings.markupIntegrated;
                 Settings.save();
             });
             addButton(lay);
@@ -224,6 +229,7 @@
         }
 
         private int prefKeysY, prefLayoutY;
+        private UIElementButton markupToggle;
 
         private static String layoutLabel() {
             return "Layout: " + (Settings.markupIntegrated ? "Integrated" : "Segregated");
@@ -442,6 +448,8 @@
                 p.drawString("Top-right buttons", width / 2 + 5, top - 11, 0xFFFFFFA0);
                 p.drawString("Keybinds for hidden buttons", width / 2 - 155, prefKeysY - 11, 0xFFFFFFA0);
                 p.drawString("Markup layout", width / 2 - 155, prefLayoutY - 11, 0xFFFFFFA0);
+                if (Settings.markupIntegrated) // mp18: why Show Markup is greyed out
+                    p.drawString("(always on)", width / 2 - 155 + 76, prefLayoutY - 11, 0xFF808080);
                 p.drawString("Off: hidden = key off (M, D, L)", width / 2 - 155, prefKeysY + 19, 0xFFAAAAAA);
             }
 

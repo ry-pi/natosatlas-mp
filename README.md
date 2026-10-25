@@ -162,6 +162,12 @@ The dimension toggle button moved from the top-left row (next to Markup) to the 
 - **Debug** tab: **Debug Info** and **Delete all map data** (still asks you to click twice).
 - The old **Import .mcr** and **Open folder** buttons, and the "copy region files into" hint, are removed. Use the Import tab.
 
+## 1.5.4-mp18
+
+- **Integrated markup is part of the map, not a mode**: with Markup layout = Integrated, the markup bar (tools, colours, undo/save) is there as soon as the world map opens and drawing works straight away. Pan is selected (drag to move the map, spawner tooltips still show). Esc closes the map; pressing M again (the map key) also closes it. There is no Markup button and M doesn't enter a markup mode. Unsaved markup is forgotten when the map closes (Ctrl+S saves).
+- **Segregated** is unchanged: second M press or the Markup button enters markup mode (left panel, Pencil), Esc leaves it, then closes the map.
+- **Preferences**: with Integrated, "Show Markup (pencil)" is greyed out and the Markup layout heading says "(always on)". Tool keys (`, 1-6, F, [ ], Ctrl+Z, Ctrl+S) work in both layouts; "Keybinds for hidden buttons" still applies to the map buttons.
+
 ## 1.5.4-mp17
 
 - **Settings > Preferences > Markup layout**: *Segregated* (default, the left-side markup panel) or *Integrated* (JourneyMap-style bar along the top: Pan, a gap, then Pencil / Line / Square / Circle / Shape eraser / Block eraser; the 16-colour palette (8 x 2) dead centre; Undo / Thickness / Fill / Clear / Save on the right, each group in its own panel with space between). The Integrated bar sits on the top row between the map buttons when there is room, otherwise on a second row under them (narrow screens: tools on the second row, palette centred under them). Saved in settings.txt (`markupIntegrated`).

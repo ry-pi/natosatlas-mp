@@ -137,6 +137,12 @@ public class MapScreen extends UIScreen {
 
     /** mp9: (re)creates every button (also after toggling dimension / markup mode), keeping the map state. */
     private void buildButtons() {
+        // mp18: Integrated layout = the markup tools are simply part of the map (no separate mode): always on, Pan first
+        if (Settings.markupIntegrated && !markupMode) {
+            markupMode = true;
+            tool = MarkupTool.PAN;
+            toolbarLayout = true;
+        }
         buttons.clear();
 
         UILayout leftLayout = new UIHorizontalLayout(5, 15, 5, false);
@@ -163,8 +169,8 @@ public class MapScreen extends UIScreen {
         addButton(helpButton);
         }
 
-        // mp9: markup mode toggle
-        if (MapButtons.MARKUP.shown) {
+        // mp9: markup mode toggle (mp18: Segregated layout only; Integrated has no markup mode to enter)
+        if (MapButtons.MARKUP.shown && !Settings.markupIntegrated) {
         int[] p = nextPos(leftLayout);
         UIElementToolButton markupButton = new UIElementToolButton(108, p[0], p[1], 20, 20, ICON_MARKUP, () -> markupMode);
         markupButton.setTooltip(MapTooltips.markup(markupMode));
@@ -451,7 +457,7 @@ public class MapScreen extends UIScreen {
             if (ghost != null && player != null) entitiesPainter.drawGhostPlayer(ctx, ghost[0], ghost[1], player.yaw);
         }
         java.util.List<dev.natowb.natosatlas.core.io.McRegionReader.Spawner> spawners = dev.natowb.natosatlas.client.SpawnerStore.forDim(viewDim);
-        hoveredSpawner = markupMode ? null : MapSpawners.hovered(ctx, spawners, Settings.spawnerFilter, mouseX, mouseY, 6);
+        hoveredSpawner = markupMode && !(Settings.markupIntegrated && tool == MarkupTool.PAN) ? null : MapSpawners.hovered(ctx, spawners, Settings.spawnerFilter, mouseX, mouseY, 6);
         spawnersPainter.draw(ctx, spawners, Settings.spawnerFilter, hoveredSpawner);
         renderMouseBlockHighlight(ctx);
         viewport.end();
@@ -496,7 +502,7 @@ public class MapScreen extends UIScreen {
         if (markupMode) renderToolbarPanel(mouseX, mouseY);
         super.render(mouseX, mouseY, delta, scaleInfo);
         if (layerView) renderLayerSlider(mouseX, mouseY);
-        if (hoveredSpawner != null && !markupMode) {
+        if (hoveredSpawner != null) {
             dev.natowb.natosatlas.client.ui.elements.UIElement.drawTooltipBox(MapTooltips.spawner(hoveredSpawner.mob, hoveredSpawner.x, hoveredSpawner.y, hoveredSpawner.z), mouseX, mouseY, width, height);
         }
         if (markupMode && toolbar != null) { // mp12: colour names on the palette
@@ -695,8 +701,12 @@ public class MapScreen extends UIScreen {
         }
 
         // mp16: markup is on the map key (M): the press that opened the map doesn't count (see mapKeyArmed), the next one does
-        if (keyCode == mapKeyCode && mapKeyArmed && !markupMode && MapButtons.MARKUP.keyWorks()) {
+        if (keyCode == mapKeyCode && mapKeyArmed && !markupMode && !Settings.markupIntegrated && MapButtons.MARKUP.keyWorks()) {
             enterMarkup();
+        } else if (keyCode == mapKeyCode && mapKeyArmed && Settings.markupIntegrated) {
+            // mp18: Integrated: M is just the map key again, so the second press closes the map
+            NAClient.get().getPlatform().screen.openNacScreen(parent);
+            return;
         }
 
         if (keyCode == Keyboard.KEY_L && !ctrlDown() && MapButtons.LAYER.keyWorks()) toggleLayerView(); // mp14
@@ -1110,6 +1120,7 @@ public class MapScreen extends UIScreen {
     /** Markup mode keys; true = handled (not passed on to the map). */
     private boolean markupKey(int keyCode) {
         if (keyCode == Keyboard.KEY_ESCAPE) {
+            if (Settings.markupIntegrated) return false; // mp18: Integrated: Esc closes the map as usual
             exitMarkup();
             return true;
         }
