@@ -24,7 +24,7 @@ public final class MapTooltips {
     public static final String HELP = "Help";
 
     public static String markup(boolean on) {
-        return on ? format("Close markup", null, "Esc") : format("Markup", null, "B");
+        return on ? format("Close markup", null, "Esc") : format("Markup", null, "M");
     }
 
     // top-right

@@ -14,6 +14,7 @@ import dev.natowb.natosatlas.core.data.NAEntity;
 import dev.natowb.natosatlas.client.platform.NAPainter;
 import dev.natowb.natosatlas.client.ui.screens.help.HelpScreen;
 import dev.natowb.natosatlas.client.ui.screens.settings.Settings;
+import dev.natowb.natosatlas.client.ui.screens.settings.MapButtons;
 import dev.natowb.natosatlas.client.ui.screens.settings.SettingsOption;
 import dev.natowb.natosatlas.client.ui.screens.settings.SettingsScreen;
 import dev.natowb.natosatlas.client.ui.elements.UIScaleInfo;
@@ -55,6 +56,11 @@ public class MapScreen extends UIScreen {
     private final MapStageEntities entitiesPainter = new MapStageEntities();
     private final MapStageWaypoints waypointsPainter = new MapStageWaypoints();
     private final MapStageSpawners spawnersPainter = new MapStageSpawners();
+
+    /** mp16: the world map key (set by the platform from its keybinding, default M). */
+    public static int mapKeyCode = Keyboard.KEY_M;
+    /** mp16: false until the map key has been seen released after the map opened, so the opening press can't start markup. */
+    private boolean mapKeyArmed = false;
 
     // mp14: Layer view (exact block slice at Settings.layerY) and spawner markers
     private static boolean layerView = false;
@@ -133,23 +139,30 @@ public class MapScreen extends UIScreen {
 
         UILayout leftLayout = new UIHorizontalLayout(5, 15, 5, false);
 
+        // mp16: each button can be hidden in Settings > Preferences; hidden ones take no slot, so the row closes up
+        if (MapButtons.CLOSE.shown) {
         UIElementIconButton closeButton = new UIElementIconButton(101, leftLayout, 20, 20, ICON_CROSS);
         closeButton.setHandler(btn -> NAClient.get().getPlatform().screen.openNacScreen(parent));
         closeButton.setTooltip(MapTooltips.CLOSE);
         addButton(closeButton);
+        }
 
+        if (MapButtons.OPTIONS.shown) {
         UIElementIconButton optionsButton = new UIElementIconButton(102, leftLayout, 20, 20, ICON_COG);
         optionsButton.setHandler(btn -> NAClient.get().getPlatform().screen.openNacScreen(new SettingsScreen(this)));
         optionsButton.setTooltip(MapTooltips.OPTIONS);
-
         addButton(optionsButton);
+        }
 
+        if (MapButtons.HELP.shown) {
         UIElementIconButton helpButton = new UIElementIconButton(106, leftLayout, 20, 20, ICON_HELP);
         helpButton.setHandler(btn -> NAClient.get().getPlatform().screen.openNacScreen(new HelpScreen(this)));
         helpButton.setTooltip(MapTooltips.HELP);
         addButton(helpButton);
+        }
 
         // mp9: markup mode toggle
+        if (MapButtons.MARKUP.shown) {
         int[] p = nextPos(leftLayout);
         UIElementToolButton markupButton = new UIElementToolButton(108, p[0], p[1], 20, 20, ICON_MARKUP, () -> markupMode);
         markupButton.setTooltip(MapTooltips.markup(markupMode));
@@ -158,18 +171,23 @@ public class MapScreen extends UIScreen {
             else enterMarkup();
         });
         addButton(markupButton);
+        }
 
 
 
         // mp11: fixed slots (MapTopBar), so nothing moves when the map mode button is disabled in the Nether
-        java.util.Map<MapTopBar.Slot, int[]> top = MapTopBar.layout(width);
+        // mp16: only the slots of buttons shown in Preferences, packed from the right
+        java.util.Map<MapTopBar.Slot, int[]> top = MapTopBar.layout(width, MapTopBar.visibleSlots());
 
 
+        if (top.containsKey(MapTopBar.Slot.WAYPOINTS)) {
         UIElementIconButton waypointsButton = new UIElementIconButton(103, top.get(MapTopBar.Slot.WAYPOINTS)[0], top.get(MapTopBar.Slot.WAYPOINTS)[1], 20, 20, ICON_WAYPOINTS);
         waypointsButton.setHandler(btn -> NAClient.get().getPlatform().screen.openNacScreen(new WaypointListScreen(this)));
         waypointsButton.setTooltip(MapTooltips.WAYPOINTS);
         addButton(waypointsButton);
+        }
 
+        if (top.containsKey(MapTopBar.Slot.SLIME)) {
         UIElementIconButton slimeChunksButton = new UIElementIconButton(104, top.get(MapTopBar.Slot.SLIME)[0], top.get(MapTopBar.Slot.SLIME)[1], 20, 20, ICON_SLIME_ENABLED);
         if (!Settings.showSlimeChunks) {
             slimeChunksButton.setIcon(ICON_SLIME_DISABLED);
@@ -185,8 +203,10 @@ public class MapScreen extends UIScreen {
         });
         slimeChunksButton.setTooltip(MapTooltips.SLIME); // mp12: never the seed
         addButton(slimeChunksButton);
+        }
 
         // mp14: spawners (click cycles Off / All / Spider / Zombie / Skeleton / Pig)
+        if (top.containsKey(MapTopBar.Slot.SPAWNERS)) {
         UIElementIconButton spawnerButton = new UIElementIconButton(111, top.get(MapTopBar.Slot.SPAWNERS)[0], top.get(MapTopBar.Slot.SPAWNERS)[1], 20, 20,
                 spawnerIcon());
         spawnerButton.setTooltip(MapTooltips.spawners(Settings.spawnerFilter));
@@ -198,13 +218,16 @@ public class MapScreen extends UIScreen {
             buildButtons();
         });
         addButton(spawnerButton);
+        }
 
         // mp14: Layer view toggle (+ its Y slider buttons at the right edge)
+        if (top.containsKey(MapTopBar.Slot.LAYER)) {
         UIElementIconButton layerButton = new UIElementIconButton(112, top.get(MapTopBar.Slot.LAYER)[0], top.get(MapTopBar.Slot.LAYER)[1], 20, 20,
                 layerView ? ICON_LAYER_ENABLED : ICON_LAYER_DISABLED);
         layerButton.setTooltip(MapTooltips.layer(layerView, Settings.layerY));
         layerButton.setHandler(btn -> toggleLayerView());
         addButton(layerButton);
+        }
         if (layerView) {
             int[] up = MapLayerSlider.upButton(width, height), dn = MapLayerSlider.downButton(width, height);
             UIElementIconButton upButton = new UIElementIconButton(113, up[0], up[1], 20, 20, ICON_PLUS);
@@ -217,6 +240,7 @@ public class MapScreen extends UIScreen {
             addButton(downButton);
         }
 
+        if (top.containsKey(MapTopBar.Slot.GRID)) {
         UIElementIconButton gridButton = new UIElementIconButton(107, top.get(MapTopBar.Slot.GRID)[0], top.get(MapTopBar.Slot.GRID)[1], 20, 20, ICON_GRID_ENABLED);
         gridButton.setTooltip(MapTooltips.GRID);
 
@@ -234,8 +258,10 @@ public class MapScreen extends UIScreen {
             Settings.save();
         });
         addButton(gridButton);
+        }
 
 
+        if (top.containsKey(MapTopBar.Slot.ENTITIES)) {
         UIElementIconButton entityButton = new UIElementIconButton(105, top.get(MapTopBar.Slot.ENTITIES)[0], top.get(MapTopBar.Slot.ENTITIES)[1], 20, 20, 5);
 
         entityButton.setTooltip(MapTooltips.entities(Settings.entityDisplayMode.name()));
@@ -268,10 +294,12 @@ public class MapScreen extends UIScreen {
             Settings.save();
         });
         addButton(entityButton);
+        }
 
 
         // mp11: the map mode button is always there; in the Nether it is greyed out (the Nether is always the cave map)
         final boolean ceiling = viewHasCeiling();
+        if (top.containsKey(MapTopBar.Slot.MAP_MODE)) {
         UIElementIconButton modeButton = new UIElementIconButton(110, top.get(MapTopBar.Slot.MAP_MODE)[0], top.get(MapTopBar.Slot.MAP_MODE)[1], 20, 20, modeIcon());
         modeButton.setTooltip(MapTopBar.mapModeTooltip(ceiling, Settings.mapRenderMode.name()));
         if (!MapTopBar.mapModeEnabled(ceiling)) {
@@ -287,13 +315,16 @@ public class MapScreen extends UIScreen {
             Settings.save();
         });
         addButton(modeButton);
+        }
 
         // mp10: dimension toggle, at the left end of the top-right map buttons (was next to markup in mp9)
+        if (top.containsKey(MapTopBar.Slot.DIMENSION)) {
         UIElementIconButton dimButton = new UIElementIconButton(109, top.get(MapTopBar.Slot.DIMENSION)[0], top.get(MapTopBar.Slot.DIMENSION)[1], 20, 20,
                 viewDim == MapDimensions.NETHER ? ICON_DIM_NETHER : ICON_DIM_OVERWORLD);
         dimButton.setTooltip(MapTooltips.dimension(viewDim));
         dimButton.setHandler(btn -> setViewDim(MapDimensions.next(viewDim, playerDim), true));
         addButton(dimButton);
+        }
 
         if (markupMode) buildToolbar();
     }
@@ -372,6 +403,7 @@ public class MapScreen extends UIScreen {
 
     @Override
     public void render(int mouseX, int mouseY, float delta, UIScaleInfo scaleInfo) {
+        if (!mapKeyArmed && !Keyboard.isKeyDown(mapKeyCode)) mapKeyArmed = true;
         syncDimension();
         painter.drawRect(0, 0, width, height, UITheme.PANEL_BG);
 
@@ -652,15 +684,16 @@ public class MapScreen extends UIScreen {
             dev.natowb.natosatlas.client.io.WorldMapExport.start(small, activeLayer, viewDim);
         }
 
-        if (keyCode == Keyboard.KEY_D && !ctrlDown()) {
+        if (keyCode == Keyboard.KEY_D && !ctrlDown() && MapButtons.DIMENSION.keyWorks()) {
             setViewDim(MapDimensions.next(viewDim, playerDim), true);
         }
 
-        if (keyCode == Keyboard.KEY_B && !markupMode) {
+        // mp16: markup is on the map key (M): the press that opened the map doesn't count (see mapKeyArmed), the next one does
+        if (keyCode == mapKeyCode && mapKeyArmed && !markupMode && MapButtons.MARKUP.keyWorks()) {
             enterMarkup();
         }
 
-        if (keyCode == Keyboard.KEY_L && !ctrlDown()) toggleLayerView(); // mp14
+        if (keyCode == Keyboard.KEY_L && !ctrlDown() && MapButtons.LAYER.keyWorks()) toggleLayerView(); // mp14
         if (layerView && keyCode == Keyboard.KEY_UP) setLayerY(Settings.layerY + (shiftDown() ? 8 : 1));
         if (layerView && keyCode == Keyboard.KEY_DOWN) setLayerY(Settings.layerY - (shiftDown() ? 8 : 1));
     }
@@ -810,17 +843,14 @@ public class MapScreen extends UIScreen {
     private void enterMarkup() {
         markupMode = true;
         buildButtons();
-        showToast("Markup: pick a tool on the left. Esc = close and forget, Ctrl+S = save as image");
     }
 
     private void exitMarkup() {
-        boolean had = !markup.isEmpty();
         cancelDrawing();
         markup.discard();
         markupMode = false;
         toolbar = null;
         buildButtons();
-        if (had) showToast("Markup closed (not saved markup is forgotten)");
     }
 
     private void cancelDrawing() {
@@ -895,10 +925,7 @@ public class MapScreen extends UIScreen {
                     b.setHandler(btn -> saveMarkup());
                     break;
                 default:
-                    b = new UIElementToolButton(315, c.x, c.y, c.w, c.h, ICON_CROSS, null);
-                    b.setTooltip(MapTooltips.CLOSE_MARKUP);
-                    b.setHandler(btn -> exitMarkup());
-                    break;
+                    continue;
             }
             addButton(b);
         }

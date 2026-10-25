@@ -51,6 +51,7 @@ public class STMinecraftMixin {
             );
         }
 
+        MapScreen.mapKeyCode = KEY_MAP.code; // mp16: the world map uses the same key for markup (second press)
         if (currentScreen != null) return;
 
         if (Keyboard.isKeyDown(KEY_MAP.code)) {

@@ -162,6 +162,14 @@ The dimension toggle button moved from the top-left row (next to Markup) to the 
 - **Debug** tab: **Debug Info** and **Delete all map data** (still asks you to click twice).
 - The old **Import .mcr** and **Open folder** buttons, and the "copy region files into" hint, are removed. Use the Import tab.
 
+## 1.5.4-mp16
+
+- **Markup toolbar**: 6 rows of 2 - Pencil / Pan, Line / Undo, Square / Thickness, Circle / Fill, Shape eraser / Clear, Block eraser / Save. The close button is gone (Esc or the markup button closes markup).
+- **Markup keys** (number row): 0 pan, 1 pencil, 2 line, 3 square, 4 circle, 5 shape eraser, 6 block eraser.
+- **Markup on M**: the world map key (M) opens the map; pressing it again while the map is open starts markup (the press that opened the map doesn't count). B no longer opens markup. Esc closes markup, then the map.
+- The "Markup: pick a tool..." and "Markup closed..." messages are gone (closing still forgets unsaved markup; Ctrl+S saves).
+- **Settings > Preferences** (tabs: World map, Minimap, Import, Preferences, Debug): show/hide each world map button - Close, Options, Help, Markup, Waypoints, Slime chunks, Spawners, Grid, Entities, Map mode, Layer view, Dimension. Hidden buttons leave no gap. **Keybinds for hidden buttons** (default on): off = a hidden button's key (M, D, L) stops working too. Esc always closes the map. Saved in settings.txt.
+
 ## Building this fork
 Built with JDK 21. From the repo root:
 ```bash

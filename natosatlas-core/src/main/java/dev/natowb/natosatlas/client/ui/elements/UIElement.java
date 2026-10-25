@@ -31,6 +31,13 @@ public abstract class UIElement {
         int texY = 46 + state * 20;
         int half = w / 2;
 
+        if (h < 20) { // mp16: short buttons keep the texture's bottom edge
+            p.drawTextureRegion(texture, x, y, 0, texY, half, h - 2);
+            p.drawTextureRegion(texture, x + half, y, 200 - half, texY, half, h - 2);
+            p.drawTextureRegion(texture, x, y + h - 2, 0, texY + 18, half, 2);
+            p.drawTextureRegion(texture, x + half, y + h - 2, 200 - half, texY + 18, half, 2);
+            return;
+        }
         p.drawTextureRegion(texture, x, y, 0, texY, half, h);
         p.drawTextureRegion(texture, x + half, y, 200 - half, texY, half, h);
     }

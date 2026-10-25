@@ -32,6 +32,8 @@ public final class SettingsStorage extends TextStorage {
         Settings.importNetherPath = getString("importNetherPath", "");
         Settings.spawnerFilter = getString("spawnerFilter", "All");
         Settings.layerY = Math.max(0, Math.min(127, getInt("layerY", 40)));
+        Settings.hiddenButtonKeys = getBoolean("hiddenButtonKeys", true);
+        for (MapButtons b : MapButtons.values()) b.shown = getBoolean("showButton." + b.key, true);
 
 
     }
@@ -57,5 +59,7 @@ public final class SettingsStorage extends TextStorage {
         put("importNetherPath", Settings.importNetherPath.replace("\n", "").replace("\r", ""));
         put("spawnerFilter", Settings.spawnerFilter);
         put("layerY", Settings.layerY);
+        put("hiddenButtonKeys", Settings.hiddenButtonKeys);
+        for (MapButtons b : MapButtons.values()) put("showButton." + b.key, b.shown);
     }
 }

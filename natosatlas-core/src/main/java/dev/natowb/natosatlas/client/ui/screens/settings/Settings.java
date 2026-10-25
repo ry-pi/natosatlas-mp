@@ -36,6 +36,9 @@ public final class Settings {
     public static String spawnerFilter = "All";
     public static int layerY = 40;
 
+    // mp16: Preferences tab. Button visibility lives in MapButtons; this says whether a hidden button's key still works.
+    public static boolean hiddenButtonKeys = true;
+
 
     // Minimap settings
     public static boolean minimapRotateWithPlayer = false;

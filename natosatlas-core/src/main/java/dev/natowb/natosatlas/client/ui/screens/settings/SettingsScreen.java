@@ -21,6 +21,7 @@
             ATLAS,
             MINIMAP,
             IMPORT,
+            PREFERENCES, // mp16
             DEBUG
         }
 
@@ -34,6 +35,7 @@
         private UIElementButton minimapTab;
         private UIElementButton importTab;
         private UIElementButton debugTab;
+        private UIElementButton prefsTab;
 
 
         @Override
@@ -59,11 +61,12 @@
             int tabY = headerY + headerHeight + 5;
 
             // mp13: four tabs (Import added), a little narrower so they still fit small windows
-            int tabButtonWidth = 72;
+            // mp16: five tabs; narrower on small screens (GUI width 320)
+            int tabSpacing = 4;
+            int tabButtonWidth = Math.min(72, (width - 12 - tabSpacing * 4) / 5);
             int tabButtonHeight = 20;
-            int tabSpacing = 6;
 
-            int tabWidth = (tabButtonWidth * 4) + (tabSpacing * 3);
+            int tabWidth = (tabButtonWidth * 5) + (tabSpacing * 4);
 
             int tabX = (width - tabWidth) / 2;
 
@@ -79,7 +82,11 @@
             importTab.setHandler(btn -> switchTab(Tab.IMPORT));
             addButton(importTab);
 
-            debugTab = new UIElementButton(205, tabX + (tabButtonWidth + tabSpacing) * 3, tabY, tabButtonWidth, tabButtonHeight, "Debug");
+            prefsTab = new UIElementButton(206, tabX + (tabButtonWidth + tabSpacing) * 3, tabY, tabButtonWidth, tabButtonHeight, "Preferences");
+            prefsTab.setHandler(btn -> switchTab(Tab.PREFERENCES));
+            addButton(prefsTab);
+
+            debugTab = new UIElementButton(205, tabX + (tabButtonWidth + tabSpacing) * 4, tabY, tabButtonWidth, tabButtonHeight, "Debug");
             debugTab.setHandler(btn -> switchTab(Tab.DEBUG));
             addButton(debugTab);
 
@@ -137,6 +144,7 @@
 
         private void updateTabActiveStates() {
             debugTab.active = !(activeTab == Tab.DEBUG);
+            prefsTab.active = !(activeTab == Tab.PREFERENCES);
             worldMapTab.active = !(activeTab == Tab.ATLAS);
             minimapTab.active = !(activeTab == Tab.MINIMAP);
             importTab.active = !(activeTab == Tab.IMPORT);
@@ -169,10 +177,47 @@
                     buildImportSettings();
                     break;
 
+                case PREFERENCES:
+                    buildPreferences();
+                    break;
+
                 case DEBUG:
                     buildDebugSettings();
                     break;
             }
+        }
+
+        /** mp16: Preferences: show/hide every world map button (left column: top-left row + the keybind option;
+         *  right column: the top-right row, right to left). 16 px rows so all 8 fit at GUI height 270. */
+        private void buildPreferences() {
+            int rowH = 16, gap = 2, top = headerY + 62;
+            int lx = width / 2 - 155, rx = width / 2 + 5;
+            int li = 0, ri = 0, id = 400;
+            for (MapButtons b : MapButtons.values()) {
+                int x = b.topLeft ? lx : rx, y = top + (b.topLeft ? li++ : ri++) * (rowH + gap);
+                UIElementButton btn = new UIElementButton(id++, x, y, 150, rowH, prefLabel("Show " + b.label, b.shown));
+                btn.setHandler(x2 -> {
+                    b.shown = !b.shown;
+                    x2.label = prefLabel("Show " + b.label, b.shown);
+                    Settings.save();
+                });
+                addButton(btn);
+            }
+            UIElementButton keys = new UIElementButton(id, lx, top + (li + 1) * (rowH + gap) + 10, 150, rowH,
+                    prefLabel("Keys", Settings.hiddenButtonKeys));
+            keys.setHandler(x2 -> {
+                Settings.hiddenButtonKeys = !Settings.hiddenButtonKeys;
+                x2.label = prefLabel("Keys", Settings.hiddenButtonKeys);
+                Settings.save();
+            });
+            addButton(keys);
+            prefKeysY = keys.y;
+        }
+
+        private int prefKeysY;
+
+        private static String prefLabel(String name, boolean on) {
+            return name + ": " + (on ? "On" : "Off");
         }
 
         /** mp15: Debug tab: debug info option and "Delete all map data" (two-click confirm, mp7). */
@@ -377,6 +422,16 @@
 
             p.drawRect(0, 0, width, height, UITheme.PANEL_BG);
             p.drawCenteredString("Settings", width / 2, headerY + 4, UITheme.TITLE_TEXT);
+
+            if (activeTab == Tab.PREFERENCES) {
+                int top = headerY + 62;
+                p.drawString("Top-left buttons", width / 2 - 155, top - 11, 0xFFFFFFA0);
+                p.drawString("Top-right buttons", width / 2 + 5, top - 11, 0xFFFFFFA0);
+                p.drawString("Keybinds for hidden buttons", width / 2 - 155, prefKeysY - 11, 0xFFFFFFA0);
+                p.drawString("Off: hiding a button also turns", width / 2 - 155, prefKeysY + 19, 0xFFAAAAAA);
+                p.drawString("off its key (M, D, L). Esc always", width / 2 - 155, prefKeysY + 29, 0xFFAAAAAA);
+                p.drawString("closes the map.", width / 2 - 155, prefKeysY + 39, 0xFFAAAAAA);
+            }
 
             if (activeTab == Tab.ATLAS) {
                 String imageStatus = dev.natowb.natosatlas.client.io.WorldMapExport.getStatus();

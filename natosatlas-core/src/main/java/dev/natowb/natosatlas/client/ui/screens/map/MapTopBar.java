@@ -20,6 +20,26 @@ public final class MapTopBar {
 
     public static final int SIZE = 20, GAP = 5, CENTER_Y = 15;
 
+    /** mp16: slots whose buttons are shown (Settings > Preferences); MapButtons uses the same names. */
+    public static java.util.Set<Slot> visibleSlots() {
+        java.util.Set<Slot> s = java.util.EnumSet.noneOf(Slot.class);
+        for (Slot sl : Slot.values())
+            if (dev.natowb.natosatlas.client.ui.screens.settings.MapButtons.valueOf(sl.name()).shown) s.add(sl);
+        return s;
+    }
+
+    /** mp16: only the given slots, packed right to left in the usual order (no gaps for hidden buttons). */
+    public static Map<Slot, int[]> layout(int screenWidth, java.util.Set<Slot> visible) {
+        UIHorizontalLayout l = new UIHorizontalLayout(screenWidth - 25, CENTER_Y, GAP, true);
+        Map<Slot, int[]> m = new EnumMap<>(Slot.class);
+        for (Slot s : Slot.values()) {
+            if (!visible.contains(s)) continue;
+            UIPoint p = l.next(SIZE, SIZE);
+            m.put(s, new int[]{p.x, p.y});
+        }
+        return m;
+    }
+
     /** Top-left corner of every slot for a screen width (all slots, always). */
     public static Map<Slot, int[]> layout(int screenWidth) {
         UIHorizontalLayout l = new UIHorizontalLayout(screenWidth - 25, CENTER_Y, GAP, true);

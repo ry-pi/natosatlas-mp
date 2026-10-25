@@ -30,8 +30,17 @@ public final class MarkupToolbar {
     /** Things in the toolbar, in order. */
     public enum Item {
         TOOL_PAN, TOOL_RECT, TOOL_ELLIPSE, TOOL_LINE, TOOL_PENCIL, TOOL_ERASER_BLOCK, TOOL_ERASER_SHAPE,
-        FILL, WIDTH, UNDO, CLEAR, SAVE, EXIT
+        FILL, WIDTH, UNDO, CLEAR, SAVE
     }
+
+    /** mp16: fixed order, two per row: tool on the left, its neighbour on the right (no close button). */
+    public static final Item[] ORDER = {
+            Item.TOOL_PENCIL, Item.TOOL_PAN,
+            Item.TOOL_LINE, Item.UNDO,
+            Item.TOOL_RECT, Item.WIDTH,
+            Item.TOOL_ELLIPSE, Item.FILL,
+            Item.TOOL_ERASER_SHAPE, Item.CLEAR,
+            Item.TOOL_ERASER_BLOCK, Item.SAVE};
 
     public static final class Cell {
         public final Item item;
@@ -68,12 +77,8 @@ public final class MarkupToolbar {
         panelW = inner + PAD * 2;
         int ix = x + PAD;
         int cy = y + PAD;
-        // mp12: 7 tools; in the 2-wide layout Pan spans the first row, so both erasers share a row.
-        // (The "Markup" title and the colour bar went to make room: the chosen swatch is framed instead.)
-        Item[] tools = {Item.TOOL_PAN, Item.TOOL_RECT, Item.TOOL_ELLIPSE, Item.TOOL_LINE, Item.TOOL_PENCIL, Item.TOOL_ERASER_BLOCK, Item.TOOL_ERASER_SHAPE};
-        Item[] opts = {Item.FILL, Item.WIDTH, Item.UNDO, Item.CLEAR, Item.SAVE, Item.EXIT};
-        cy = grid(tools, ix, cy, inner) + SECTION;
-        cy = grid(opts, ix, cy, inner) + SECTION;
+        // mp16: one grid in ORDER (6 rows of 2), every cell one icon wide; no close button (Esc / the markup button)
+        cy = grid(ORDER, ix, cy, inner) + SECTION;
         int perRow = cols * 2; // two 9 px swatches per 20 px cell column: 2*9 + 2 = 20
         for (int i = 0; i < PALETTE.length; i++) {
             int r = i / perRow, c = i % perRow;
@@ -85,13 +90,8 @@ public final class MarkupToolbar {
     }
 
     private int grid(Item[] items, int ix, int cy, int inner) {
-        int start = 0, slot = 0;
-        if (cols == 2 && items.length % 2 == 1) { // odd count, 2 wide: the first item fills its row
-            cells.add(new Cell(items[0], ix, cy, inner, CELL));
-            start = 1;
-            slot = 2;
-        }
-        for (int i = start; i < items.length; i++, slot++) {
+        int slot = 0;
+        for (int i = 0; i < items.length; i++, slot++) {
             int r = slot / cols, c = slot % cols;
             cells.add(new Cell(items[i], ix + c * (CELL + GAP), cy + r * (CELL + GAP), CELL, CELL));
         }
