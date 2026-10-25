@@ -57,13 +57,13 @@ public final class MapTooltips {
     }
 
     public static String mapMode(String mode) {
-        return "Map mode: " + mode;
+        return "Time: " + mode;
     }
 
-    public static final String MAP_MODE_DISABLED = "Map mode only applies in the Overworld";
+    public static final String MAP_MODE_DISABLED = "Time only applies in the Overworld";
 
     public static String dimension(int viewDim) {
-        return format("Showing: " + MapDimensions.name(viewDim), null, "D");
+        return format("Dimension: " + MapDimensions.name(viewDim), null, "D");
     }
 
     // markup toolbar (tools: MarkupTool.tooltip())

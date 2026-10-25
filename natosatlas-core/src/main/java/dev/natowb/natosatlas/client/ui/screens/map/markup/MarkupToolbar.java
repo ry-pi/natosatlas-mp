@@ -55,7 +55,17 @@ public final class MarkupToolbar {
         }
     }
 
+    /** mp17: Integrated (top bar) groups: Pan alone, then the drawing tools; options on the right of the palette. */
+    public static final Item[] LEFT_WING = {Item.TOOL_PAN, Item.TOOL_PENCIL, Item.TOOL_LINE, Item.TOOL_RECT, Item.TOOL_ELLIPSE,
+            Item.TOOL_ERASER_SHAPE, Item.TOOL_ERASER_BLOCK};
+    public static final Item[] RIGHT_WING = {Item.UNDO, Item.WIDTH, Item.FILL, Item.CLEAR, Item.SAVE};
+    /** mp17: space between Pan and Pencil, and between the three panels (left wing / colours / right wing). */
+    public static final int PAN_GAP = 6, WING_GAP = 6;
+
     public int panelX, panelY, panelW, panelH, cols;
+    public boolean integrated;
+    /** Background panels {x, y, w, h}: one for Segregated, three for Integrated. */
+    public final List<int[]> panels = new ArrayList<>();
     public final List<Cell> cells = new ArrayList<>();
     public final int[][] swatches = new int[PALETTE.length][]; // {x, y} per palette entry
 
@@ -67,6 +77,87 @@ public final class MarkupToolbar {
             if (t.panelY + t.panelH <= maxBottom) break;
         }
         return t;
+    }
+
+    private MarkupToolbar() {
+    }
+
+    /** Width of a row of cells. */
+    private static int rowW(int n) {
+        return n * CELL + (n - 1) * GAP;
+    }
+
+    public static int leftWingW() {
+        return rowW(LEFT_WING.length) + PAN_GAP + PAD * 2;
+    }
+
+    public static int rightWingW() {
+        return rowW(RIGHT_WING.length) + PAD * 2;
+    }
+
+    public static int paletteW() {
+        return 8 * SWATCH + 7 * SWATCH_GAP + PAD * 2;
+    }
+
+    /**
+     * mp17: Integrated layout, JourneyMap style. The palette (8 x 2 swatches) is centred on the screen; the left wing
+     * (Pan, gap, Pencil Line Rect Ellipse Shape-eraser Block-eraser) and right wing (Undo Thickness Fill Clear Save)
+     * sit either side with a gap. On the top row between the map buttons when it fits (leftEnd / rightStart = edges of
+     * the top-left / top-right button rows), else on a second row under them; on narrow screens the wings share the
+     * second row (centred) and the palette goes centred under them.
+     */
+    public static MarkupToolbar integrated(int screenW, int leftEnd, int rightStart) {
+        MarkupToolbar t = new MarkupToolbar();
+        t.integrated = true;
+        t.cols = 0;
+        int cx = screenW / 2, ph = CELL + PAD * 2;
+        int lw = leftWingW(), rw = rightWingW(), pw = paletteW();
+        int palX = cx - pw / 2;
+        int lx = palX - WING_GAP - lw, rx = palX + pw + WING_GAP;
+        int y;
+        if (lx >= leftEnd + 4 && rx + rw <= rightStart - 4) y = 2; // top row, between the map buttons
+        else if (lx >= 2 && rx + rw <= screenW - 2) y = 28;        // second row
+        else {                                                      // narrow: wings, then palette under them
+            int total = lw + WING_GAP + rw;
+            lx = cx - total / 2;
+            rx = lx + lw + WING_GAP;
+            t.wing(LEFT_WING, lx, 28, true);
+            t.wing(RIGHT_WING, rx, 28, false);
+            t.palette(palX, 28 + ph + WING_GAP);
+            t.bounds();
+            return t;
+        }
+        t.wing(LEFT_WING, lx, y, true);
+        t.palette(palX, y);
+        t.wing(RIGHT_WING, rx, y, false);
+        t.bounds();
+        return t;
+    }
+
+    private void wing(Item[] items, int px, int py, boolean panGap) {
+        int x = px + PAD;
+        for (int i = 0; i < items.length; i++) {
+            cells.add(new Cell(items[i], x, py + PAD, CELL, CELL));
+            x += CELL + GAP + (panGap && i == 0 ? PAN_GAP : 0);
+        }
+        panels.add(new int[]{px, py, x - GAP + PAD - px, CELL + PAD * 2});
+    }
+
+    private void palette(int px, int py) {
+        for (int i = 0; i < PALETTE.length; i++) {
+            int r = i / 8, c = i % 8;
+            swatches[i] = new int[]{px + PAD + c * (SWATCH + SWATCH_GAP), py + PAD + r * (SWATCH + SWATCH_GAP)};
+        }
+        panels.add(new int[]{px, py, paletteW(), CELL + PAD * 2});
+    }
+
+    private void bounds() {
+        int x0 = Integer.MAX_VALUE, y0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, y1 = Integer.MIN_VALUE;
+        for (int[] p : panels) {
+            x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]);
+            x1 = Math.max(x1, p[0] + p[2]); y1 = Math.max(y1, p[1] + p[3]);
+        }
+        panelX = x0; panelY = y0; panelW = x1 - x0; panelH = y1 - y0;
     }
 
     private MarkupToolbar(int x, int y, int cols) {
@@ -87,6 +178,7 @@ public final class MarkupToolbar {
         int rows = (PALETTE.length + perRow - 1) / perRow;
         cy += rows * SWATCH + (rows - 1) * SWATCH_GAP;
         panelH = cy + PAD - y;
+        panels.add(new int[]{panelX, panelY, panelW, panelH});
     }
 
     private int grid(Item[] items, int ix, int cy, int inner) {
@@ -100,7 +192,8 @@ public final class MarkupToolbar {
     }
 
     public boolean inside(int mx, int my) {
-        return mx >= panelX && mx < panelX + panelW && my >= panelY && my < panelY + panelH;
+        for (int[] p : panels) if (mx >= p[0] && mx < p[0] + p[2] && my >= p[1] && my < p[1] + p[3]) return true;
+        return false;
     }
 
     /** Palette index under the mouse, or -1. */

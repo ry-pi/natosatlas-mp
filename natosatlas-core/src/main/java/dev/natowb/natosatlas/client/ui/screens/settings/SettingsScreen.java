@@ -203,7 +203,16 @@
                 });
                 addButton(btn);
             }
-            UIElementButton keys = new UIElementButton(id, lx, top + (li + 1) * (rowH + gap) + 10, 150, rowH,
+            // mp17: markup layout (Segregated = left panel, Integrated = bar along the top)
+            UIElementButton lay = new UIElementButton(id++, lx, top + li * (rowH + gap) + 12, 150, rowH, layoutLabel());
+            lay.setHandler(x2 -> {
+                Settings.markupIntegrated = !Settings.markupIntegrated;
+                x2.label = layoutLabel();
+                Settings.save();
+            });
+            addButton(lay);
+            prefLayoutY = lay.y;
+            UIElementButton keys = new UIElementButton(id, lx, lay.y + rowH + 14, 150, rowH,
                     prefLabel("Keys", Settings.hiddenButtonKeys));
             keys.setHandler(x2 -> {
                 Settings.hiddenButtonKeys = !Settings.hiddenButtonKeys;
@@ -214,7 +223,11 @@
             prefKeysY = keys.y;
         }
 
-        private int prefKeysY;
+        private int prefKeysY, prefLayoutY;
+
+        private static String layoutLabel() {
+            return "Layout: " + (Settings.markupIntegrated ? "Integrated" : "Segregated");
+        }
 
         private static String prefLabel(String name, boolean on) {
             return name + ": " + (on ? "On" : "Off");
@@ -428,9 +441,8 @@
                 p.drawString("Top-left buttons", width / 2 - 155, top - 11, 0xFFFFFFA0);
                 p.drawString("Top-right buttons", width / 2 + 5, top - 11, 0xFFFFFFA0);
                 p.drawString("Keybinds for hidden buttons", width / 2 - 155, prefKeysY - 11, 0xFFFFFFA0);
-                p.drawString("Off: hiding a button also turns", width / 2 - 155, prefKeysY + 19, 0xFFAAAAAA);
-                p.drawString("off its key (M, D, L). Esc always", width / 2 - 155, prefKeysY + 29, 0xFFAAAAAA);
-                p.drawString("closes the map.", width / 2 - 155, prefKeysY + 39, 0xFFAAAAAA);
+                p.drawString("Markup layout", width / 2 - 155, prefLayoutY - 11, 0xFFFFFFA0);
+                p.drawString("Off: hidden = key off (M, D, L)", width / 2 - 155, prefKeysY + 19, 0xFFAAAAAA);
             }
 
             if (activeTab == Tab.ATLAS) {

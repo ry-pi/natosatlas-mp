@@ -162,6 +162,13 @@ The dimension toggle button moved from the top-left row (next to Markup) to the 
 - **Debug** tab: **Debug Info** and **Delete all map data** (still asks you to click twice).
 - The old **Import .mcr** and **Open folder** buttons, and the "copy region files into" hint, are removed. Use the Import tab.
 
+## 1.5.4-mp17
+
+- **Settings > Preferences > Markup layout**: *Segregated* (default, the left-side markup panel) or *Integrated* (JourneyMap-style bar along the top: Pan, a gap, then Pencil / Line / Square / Circle / Shape eraser / Block eraser; the 16-colour palette (8 x 2) dead centre; Undo / Thickness / Fill / Clear / Save on the right, each group in its own panel with space between). The Integrated bar sits on the top row between the map buttons when there is room, otherwise on a second row under them (narrow screens: tools on the second row, palette centred under them). Saved in settings.txt (`markupIntegrated`).
+- Markup opens with **Pencil** selected in Segregated and **Pan** in Integrated (also when the layout is switched).
+- **Pan key is now `** (the key left of 1); 1-6 stay Pencil, Line, Square, Circle, Shape eraser, Block eraser. 0 does nothing.
+- Wording: the map mode button is now **Time** (tooltip and Preferences), and the dimension button says **Dimension: Overworld / Nether**.
+
 ## 1.5.4-mp16
 
 - **Markup toolbar**: 6 rows of 2 - Pencil / Pan, Line / Undo, Square / Thickness, Circle / Fill, Shape eraser / Clear, Block eraser / Save. The close button is gone (Esc or the markup button closes markup).

@@ -33,6 +33,7 @@ public final class SettingsStorage extends TextStorage {
         Settings.spawnerFilter = getString("spawnerFilter", "All");
         Settings.layerY = Math.max(0, Math.min(127, getInt("layerY", 40)));
         Settings.hiddenButtonKeys = getBoolean("hiddenButtonKeys", true);
+        Settings.markupIntegrated = getBoolean("markupIntegrated", false);
         for (MapButtons b : MapButtons.values()) b.shown = getBoolean("showButton." + b.key, true);
 
 
@@ -60,6 +61,7 @@ public final class SettingsStorage extends TextStorage {
         put("spawnerFilter", Settings.spawnerFilter);
         put("layerY", Settings.layerY);
         put("hiddenButtonKeys", Settings.hiddenButtonKeys);
+        put("markupIntegrated", Settings.markupIntegrated);
         for (MapButtons b : MapButtons.values()) put("showButton." + b.key, b.shown);
     }
 }

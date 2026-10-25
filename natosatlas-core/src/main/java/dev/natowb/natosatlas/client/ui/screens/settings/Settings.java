@@ -38,6 +38,8 @@ public final class Settings {
 
     // mp16: Preferences tab. Button visibility lives in MapButtons; this says whether a hidden button's key still works.
     public static boolean hiddenButtonKeys = true;
+    /** mp17: markup tools in a JourneyMap-style bar along the top (true) or the left-side panel (false, default). */
+    public static boolean markupIntegrated = false;
 
 
     // Minimap settings

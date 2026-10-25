@@ -7,7 +7,7 @@ import static dev.natowb.natosatlas.client.texture.TextureProvider.*;
 
 /** Markup toolbar tools (number keys 1-7 while markup mode is on). */
 public enum MarkupTool {
-    PAN("Pan", null, ICON_TOOL_PAN, Keyboard.KEY_0),
+    PAN("Pan", null, ICON_TOOL_PAN, Keyboard.KEY_GRAVE),
     RECT("Rectangle", "Shift = square", ICON_TOOL_RECT, Keyboard.KEY_3),
     ELLIPSE("Ellipse", "Shift = circle", ICON_TOOL_ELLIPSE, Keyboard.KEY_4),
     LINE("Line", "Shift = 45 degrees", ICON_TOOL_LINE, Keyboard.KEY_2),
@@ -33,7 +33,7 @@ public enum MarkupTool {
 
     /** mp16: number row key as shown, e.g. "0" for pan (Keyboard.KEY_1..KEY_9 = 2..10, KEY_0 = 11). */
     public String hotkey() {
-        return key == Keyboard.KEY_0 ? "0" : String.valueOf(key - Keyboard.KEY_1 + 1);
+        return key == Keyboard.KEY_GRAVE ? "`" : key == Keyboard.KEY_0 ? "0" : String.valueOf(key - Keyboard.KEY_1 + 1);
     }
 
     /** "Name (modifier keys) [hotkey]". */

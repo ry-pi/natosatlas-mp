@@ -86,7 +86,9 @@ public class MapScreen extends UIScreen {
     // mp9: markup mode (in memory only; Escape / closing the map forgets it unless saved as an image)
     private boolean markupMode = false;
     private final MarkupModel markup = new MarkupModel();
-    private MarkupTool tool = MarkupTool.RECT;
+    private MarkupTool tool = MarkupTool.PENCIL;
+    /** mp17: right edge of the shown top-left buttons and left edge of the shown top-right ones (for the Integrated bar). */
+    private int leftChromeEnd = 0, rightChromeStart = Integer.MAX_VALUE;
     private int markupColor = MarkupToolbar.DEFAULT_COLOR;
     private int markupWidth = 1; // mp11: thickness in blocks
     private boolean markupFill = false;
@@ -178,6 +180,10 @@ public class MapScreen extends UIScreen {
         // mp11: fixed slots (MapTopBar), so nothing moves when the map mode button is disabled in the Nether
         // mp16: only the slots of buttons shown in Preferences, packed from the right
         java.util.Map<MapTopBar.Slot, int[]> top = MapTopBar.layout(width, MapTopBar.visibleSlots());
+        rightChromeStart = width;
+        for (int[] q : top.values()) rightChromeStart = Math.min(rightChromeStart, q[0]);
+        leftChromeEnd = 0;
+        for (UIElementButton b : buttons) if (b.id == 101 || b.id == 102 || b.id == 106 || b.id == 108) leftChromeEnd = Math.max(leftChromeEnd, b.x + b.w);
 
 
         if (top.containsKey(MapTopBar.Slot.WAYPOINTS)) {
@@ -840,8 +846,17 @@ public class MapScreen extends UIScreen {
         return Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
     }
 
+    /** mp17: Integrated layout starts on Pan, Segregated on Pencil (also applied when the layout is switched). */
+    private static MarkupTool defaultTool() {
+        return Settings.markupIntegrated ? MarkupTool.PAN : MarkupTool.PENCIL;
+    }
+
+    private Boolean toolbarLayout = null;
+
     private void enterMarkup() {
         markupMode = true;
+        tool = defaultTool();
+        toolbarLayout = Settings.markupIntegrated;
         buildButtons();
     }
 
@@ -873,6 +888,14 @@ public class MapScreen extends UIScreen {
     }
 
     private void buildToolbar() {
+        if (toolbarLayout != null && toolbarLayout != Settings.markupIntegrated) { // layout switched in Preferences
+            cancelDrawing();
+            tool = defaultTool();
+        }
+        toolbarLayout = Settings.markupIntegrated;
+        if (Settings.markupIntegrated) {
+            toolbar = MarkupToolbar.integrated(width, leftChromeEnd, rightChromeStart);
+        } else
         toolbar = MarkupToolbar.layout(4, 29, height - 4); // below the top button row; the bottom info box is centred, so the panel may go down to the bottom
         for (final MarkupToolbar.Cell c : toolbar.cells) {
             UIElementToolButton b;
@@ -935,10 +958,12 @@ public class MapScreen extends UIScreen {
     private void renderToolbarPanel(int mouseX, int mouseY) {
         MarkupToolbar t = toolbar;
         if (t == null) return;
-        // same look as the map's info box: dark panel with a thin purple line top and bottom
-        painter.drawRect(t.panelX, t.panelY, t.panelX + t.panelW, t.panelY + t.panelH, 0xE0100010);
-        painter.drawRect(t.panelX, t.panelY, t.panelX + t.panelW, t.panelY + 1, 0x805000FF);
-        painter.drawRect(t.panelX, t.panelY + t.panelH - 1, t.panelX + t.panelW, t.panelY + t.panelH, 0x805000FF);
+        // same look as the map's info box: dark panel with a thin purple line top and bottom (mp17: one per group)
+        for (int[] q : t.panels) {
+            painter.drawRect(q[0], q[1], q[0] + q[2], q[1] + q[3], 0xE0100010);
+            painter.drawRect(q[0], q[1], q[0] + q[2], q[1] + 1, 0x805000FF);
+            painter.drawRect(q[0], q[1] + q[3] - 1, q[0] + q[2], q[1] + q[3], 0x805000FF);
+        }
         for (int i = 0; i < MarkupToolbar.PALETTE.length; i++) {
             int[] s = t.swatches[i];
             int col = MarkupToolbar.PALETTE[i];

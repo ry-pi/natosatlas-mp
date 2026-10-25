@@ -16,7 +16,7 @@ public enum MapButtons {
     SPAWNERS("spawners", "Spawners", false),
     GRID("grid", "Grid", false),
     ENTITIES("entities", "Entities", false),
-    MAP_MODE("mapMode", "Map mode", false),
+    MAP_MODE("mapMode", "Time", false),
     LAYER("layer", "Layer view", false),
     DIMENSION("dimension", "Dimension", false);
 
