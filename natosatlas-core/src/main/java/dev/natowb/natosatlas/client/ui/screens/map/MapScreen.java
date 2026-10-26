@@ -65,6 +65,8 @@ public class MapScreen extends UIScreen {
     // mp14: Layer view (exact block slice at Settings.layerY) and spawner markers
     private static boolean layerView = false;
     private boolean draggingLayer = false;
+    /** mp19: left press started on the layer +/− button, so the rest of the gesture must not pan. */
+    private boolean layerStepHold = false;
     private dev.natowb.natosatlas.core.io.McRegionReader.Spawner hoveredSpawner = null;
 
     private int activeLayer = 0;
@@ -98,6 +100,8 @@ public class MapScreen extends UIScreen {
     private int drawStartSX, drawStartSY;
     private boolean drawMoved = false;
     private boolean erasing = false;
+    /** mp19: left press landed on the Integrated markup bar while Pan is selected, so the gesture must not pan. */
+    private boolean chromeHold = false;
     private double[] lastPencil = null;
     private int[] lastErase = null; // mp11: last erased block, so a fast drag erases a connected path
 
@@ -571,15 +575,35 @@ public class MapScreen extends UIScreen {
     }
 
 
+    /** mp19: Layer view +/− and the Y track take the left button before icon buttons and before map pan. */
+    @Override
+    protected boolean claimMouseButton(int mouseX, int mouseY, int button, boolean pressed) {
+        if (!pressed || button != 0 || !layerView) return false;
+        int step = MapLayerSlider.stepAt(width, height, mouseX, mouseY);
+        if (step != 0) {
+            layerStepHold = true;
+            setLayerY(Settings.layerY + step);
+            NAClient.get().getPlatform().screen.playSound("random.click", 1.0F, 1.0F);
+            return true;
+        }
+        if (MapLayerSlider.onTrack(width, height, mouseX, mouseY)) {
+            draggingLayer = true;
+            setLayerY(MapLayerSlider.yAt(width, height, mouseY));
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public void mouseDown(int x, int y, int button) {
         super.mouseDown(x, y, button);
-        if (markupMode && markupMouseDown(x, y, button)) return;
-        if (button == 0 && layerView && MapLayerSlider.onTrack(width, height, x, y)) { // mp14
+        // mp19: backup if the press was not claimed above (so a markup tool cannot pan/draw on the slider)
+        if (button == 0 && layerView && MapLayerSlider.onTrack(width, height, x, y)) {
             draggingLayer = true;
             setLayerY(MapLayerSlider.yAt(width, height, y));
             return;
         }
+        if (markupMode && markupMouseDown(x, y, button)) return;
         if (button == 0 && hoveredSpawner != null) { // mp14: copy spawner coordinates
             String c = hoveredSpawner.x + " " + hoveredSpawner.y + " " + hoveredSpawner.z;
             try {
@@ -649,8 +673,10 @@ public class MapScreen extends UIScreen {
     @Override
     public void mouseDrag(int x, int y, int button) {
         super.mouseDrag(x, y, button);
-        if (markupMode && markupMouseDrag(x, y, button)) return;
+        if (layerStepHold) return;
+        // mp19: a layer-slider drag keeps changing Y even when Pan (or a markup tool) would take the gesture
         if (draggingLayer) { setLayerY(MapLayerSlider.yAt(width, height, y)); return; }
+        if (markupMode && markupMouseDrag(x, y, button)) return;
         if (button == 0 || button == 2) viewport.dragMove(x, y);
         if (button == 1) viewport.rotateMove(x, y);
     }
@@ -658,8 +684,9 @@ public class MapScreen extends UIScreen {
     @Override
     public void mouseUp(int x, int y, int button) {
         super.mouseUp(x, y, button);
+        if (layerStepHold) { layerStepHold = false; chromeHold = false; return; }
+        if (draggingLayer) { draggingLayer = false; chromeHold = false; Settings.save(); return; }
         if (markupMode && markupMouseUp(x, y, button)) return;
-        if (draggingLayer) { draggingLayer = false; Settings.save(); return; }
         if (button == 0 || button == 2) viewport.dragEnd();
         if (button == 1) viewport.rotateEnd();
     }
@@ -989,7 +1016,27 @@ public class MapScreen extends UIScreen {
         }
     }
 
+    /** mp19: Integrated + Pan browses like Segregated with markup closed. The bar itself does not pan. */
+    private boolean integratedPan() {
+        return Settings.markupIntegrated && tool == MarkupTool.PAN;
+    }
+
     private boolean markupMouseDown(int x, int y, int button) {
+        if (integratedPan()) {
+            if (toolbar != null && toolbar.inside(x, y)) {
+                if (button == 0) {
+                    int sw = toolbar.swatchAt(x, y);
+                    if (sw >= 0) {
+                        markupColor = MarkupToolbar.PALETTE[sw];
+                        NAClient.get().getPlatform().screen.playSound("random.click", 1.0F, 1.0F);
+                    }
+                }
+                chromeHold = true;
+                return true;
+            }
+            chromeHold = false;
+            return false;
+        }
         if (button == 1) { // right drag rotates as usual (no temp waypoints in markup mode)
             viewport.rotateStart(x, y);
             return true;
@@ -1071,6 +1118,7 @@ public class MapScreen extends UIScreen {
     }
 
     private boolean markupMouseDrag(int x, int y, int button) {
+        if (integratedPan()) return chromeHold;
         if (button == 1) {
             viewport.rotateMove(x, y);
             return true;
@@ -1086,6 +1134,12 @@ public class MapScreen extends UIScreen {
     }
 
     private boolean markupMouseUp(int x, int y, int button) {
+        if (integratedPan()) {
+            if (!chromeHold) return false;
+            chromeHold = false;
+            return true;
+        }
+        chromeHold = false;
         if (button == 1) {
             viewport.rotateEnd();
             return true;

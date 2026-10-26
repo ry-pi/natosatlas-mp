@@ -83,6 +83,12 @@ public abstract class UIScreen {
         }
 
         if (button >= 0 && button <= 2) {
+            // A screen can claim the click before buttons and mouseDown (the map's layer slider).
+            if (claimMouseButton(x, y, button, pressed)) {
+                mouseButtons[button] = pressed;
+                return;
+            }
+
             if (button == 0 && pressed && handleClickDispatch(x, y)) {
                 return;
             }
@@ -105,6 +111,14 @@ public abstract class UIScreen {
         }
     }
 
+
+    /**
+     * True if this button press/release belongs to the screen itself, ahead of icon buttons and map gestures.
+     * Press-only claims should return false on release so mouseUp still runs.
+     */
+    protected boolean claimMouseButton(int mouseX, int mouseY, int button, boolean pressed) {
+        return false;
+    }
 
     private boolean handleClickDispatch(int mouseX, int mouseY) {
         for (UIElementButton btn : buttons) {

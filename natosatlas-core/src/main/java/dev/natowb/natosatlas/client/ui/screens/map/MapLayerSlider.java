@@ -32,9 +32,20 @@ public final class MapLayerSlider {
         return Math.max(0, Math.min(127, Math.round(f * 127)));
     }
 
-    /** Over the track (with a few pixels of slack for the handle)? */
+    /** Over the track (slack covers the handle and the gap up to the + / - buttons)? */
     public static boolean onTrack(int w, int h, int mx, int my) {
         int[] t = track(w, h);
-        return mx >= t[0] - 6 && mx <= t[2] + 6 && my >= t[1] - 4 && my <= t[3] + 4;
+        return mx >= t[0] - 6 && mx <= t[2] + 6 && my >= t[1] - 6 && my <= t[3] + 6;
+    }
+
+    /** +1 if the point is on the up button, -1 on the down button, 0 otherwise. Up wins if they overlap. */
+    public static int stepAt(int w, int h, int mx, int my) {
+        if (hit(upButton(w, h), mx, my)) return 1;
+        if (hit(downButton(w, h), mx, my)) return -1;
+        return 0;
+    }
+
+    private static boolean hit(int[] b, int mx, int my) {
+        return mx >= b[0] && mx <= b[0] + BUTTON && my >= b[1] && my <= b[1] + BUTTON;
     }
 }

@@ -57,7 +57,8 @@ public class MapStageEntities implements MapStage {
                 continue;
             }
 
-            if (p.isCrouching || p.isSpectating) continue;
+            // mp19: sneaking players stay on the map. Spectators are still hidden.
+            if (p.isSpectating) continue;
 
             double dx = p.x - px;
             double dy = p.y - py;

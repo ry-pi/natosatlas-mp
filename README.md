@@ -162,6 +162,12 @@ The dimension toggle button moved from the top-left row (next to Markup) to the 
 - **Debug** tab: **Debug Info** and **Delete all map data** (still asks you to click twice).
 - The old **Import .mcr** and **Open folder** buttons, and the "copy region files into" hint, are removed. Use the Import tab.
 
+## 1.5.4-mp19
+
+- **Crouching players stay on the world map.** Sneaking no longer hides a player marker. Spectators are still hidden.
+- **Integrated Pan is normal browsing.** With Markup layout = Integrated and Pan selected (the default), the map behaves like Segregated with markup closed: left-drag pans, right-drag rotates, double-click creates waypoints, spawner clicks copy coordinates. Clicks on the markup bar (tools and colours) do not pan.
+- **Layer view wins over pan.** The Y slider and the + / − buttons take the mouse before map pan, so dragging the slider changes the slice.
+
 ## 1.5.4-mp18
 
 - **Integrated markup is part of the map, not a mode**: with Markup layout = Integrated, the markup bar (tools, colours, undo/save) is there as soon as the world map opens and drawing works straight away. Pan is selected (drag to move the map, spawner tooltips still show). Esc closes the map; pressing M again (the map key) also closes it. There is no Markup button and M doesn't enter a markup mode. Unsaved markup is forgotten when the map closes (Ctrl+S saves).
