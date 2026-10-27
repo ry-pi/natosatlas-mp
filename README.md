@@ -1,3 +1,12 @@
+VIBE CODE WARNING:
+THIS WAS MADE ENTIRELY BY CURSOR CLOUD AGENTS. I ONLY WATCHED IT CODE ENOUGH TO BE ABLE TO FIX THE BUGS IT CREATEED
+I WILL NOT BE MAINTAINING THIS CODE
+USE AT YOUR OWN RISK
+
+
+
+
+
 > **Unofficial multiplayer fork (1.5.4-mp) of [Natos Atlas](https://github.com/natowb/bm-natosatlas) by natowb, MIT licensed (see `LICENSE`, unchanged).**
 > This fork is based on upstream tag `1.5.4` and adds multiplayer fixes, a True colour block mode, Classic grass in True colour mode, server region-file import, a manual slime seed and a corrected slime-chunk formula. See the change notes at the bottom.
 > Only the **StationAPI** build was patched and tested (Babric, StationAPI 2.0.0-alpha.6.4 at runtime). The ModLoader/BTA modules share the core code but were not tested.
